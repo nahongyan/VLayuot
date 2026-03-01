@@ -32,8 +32,14 @@ void TimelineDelegate::paint(QPainter* painter,
     // 绘制时间线（在整个 item 高度上）
     paintTimeline(painter, option, index);
 
-    // 根据节点类型设置布局
-    setupLayoutForType(index);
+    // 获取当前节点类型
+    NodeType type = static_cast<NodeType>(index.data(NodeTypeRole).toInt());
+
+    // 确保布局已缓存（只在类型改变时重建）
+    ensureLayoutCached(type, index);
+
+    // 更新动态属性（如 copied 状态）
+    updateDynamicProperties(index);
 
     // 调用父类绘制组件
     DelegateController::paint(painter, option, index);
@@ -161,15 +167,20 @@ bool TimelineDelegate::editorEvent(QEvent* event,
 }
 
 // ============================================================================
-// 布局设置
+// 布局缓存
 // ============================================================================
 
-void TimelineDelegate::setupLayoutForType(const QModelIndex& index) const
+void TimelineDelegate::ensureLayoutCached(NodeType type, const QModelIndex& index) const
 {
-    // 清除之前的布局
-    clearComponents();
+    // 类型相同时复用现有布局
+    if (m_layoutCached && m_lastType == type) {
+        return;
+    }
 
-    NodeType type = static_cast<NodeType>(index.data(NodeTypeRole).toInt());
+    // 清除之前的布局并重建
+    clearComponents();
+    m_lastType = type;
+    m_layoutCached = true;
     m_lastNodeId = index.data(NodeIdRole).toString();
 
     switch (type) {
@@ -192,6 +203,33 @@ void TimelineDelegate::setupLayoutForType(const QModelIndex& index) const
         setupTaskListLayout(index);
         break;
     }
+}
+
+void TimelineDelegate::updateDynamicProperties(const QModelIndex& index) const
+{
+    NodeType type = static_cast<NodeType>(index.data(NodeTypeRole).toInt());
+
+    // 更新 CodeBlock 的 copied 状态（这是动态的，不在 model 中）
+    if (type == NodeType::CodeBlock) {
+        QString nodeId = index.data(NodeIdRole).toString();
+        bool copied = m_copiedStates.value(nodeId, false);
+
+        // 直接设置组件属性
+        auto* comp = component(QStringLiteral("codeblock"));
+        if (comp) {
+            comp->setProperty("copied", copied);
+        }
+    }
+}
+
+// ============================================================================
+// 布局设置
+// ============================================================================
+
+void TimelineDelegate::setupLayoutForType(const QModelIndex& index) const
+{
+    NodeType type = static_cast<NodeType>(index.data(NodeTypeRole).toInt());
+    ensureLayoutCached(type, index);
 }
 
 void TimelineDelegate::setupUserMessageLayout(const QModelIndex& index) const
@@ -226,8 +264,7 @@ void TimelineDelegate::setupAIMessageLayout(const QModelIndex& index) const
 
 void TimelineDelegate::setupCodeBlockLayout(const QModelIndex& index) const
 {
-    QString nodeId = index.data(NodeIdRole).toString();
-    bool copied = m_copiedStates.value(nodeId, false);
+    Q_UNUSED(index)
 
     setMargins(Theme::contentLeftMargin, Theme::contentVMargin,
                Theme::contentRightMargin, Theme::contentVMargin);
@@ -238,7 +275,7 @@ void TimelineDelegate::setupCodeBlockLayout(const QModelIndex& index) const
         .property("language", LanguageRole)
         .property("code", CodeRole)
         .property("copyHovered", false)
-        .property("copied", copied);
+        .property("copied", false);  // 初始值，动态更新在 updateDynamicProperties 中
 }
 
 void TimelineDelegate::setupToolCallLayout(const QModelIndex& index) const

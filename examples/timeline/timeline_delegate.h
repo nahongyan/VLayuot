@@ -108,9 +108,15 @@ private:
     void paintTimeline(QPainter* painter, const QStyleOptionViewItem& option,
                        const QModelIndex& index) const;
 
+    // 布局缓存
+    void ensureLayoutCached(NodeType type, const QModelIndex& index) const;
+    void updateDynamicProperties(const QModelIndex& index) const;
+
     // 可变状态（用于缓存）
     mutable QHash<QString, bool> m_copiedStates;  ///< 复制状态缓存
     mutable QString m_lastNodeId;                  ///< 上次处理的节点 ID
+    mutable NodeType m_lastType = static_cast<NodeType>(-1);  ///< 上次布局类型，初始为无效值
+    mutable bool m_layoutCached = false;           ///< 布局是否已缓存
 };
 
 } // namespace Timeline
