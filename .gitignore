@@ -1,0 +1,33 @@
+# Build directories
+build/
+debug/
+release/
+
+# Qt Creator
+.qtcreator/
+*.user
+*.autosave
+
+# Generated files
+Makefile
+*.moc
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# Object files
+*.obj
+*.o
+
+# Libraries
+*.lib
+*.a
+
+# Binaries
+*.exe
+*.dll
+
+# Temporary files
+*.tmp
+*.bak
+*~

@@ -27,7 +27,7 @@ namespace VLayout {
  *
  * 支持文本对齐、自动换行和省略模式。
  */
-class LabelComponent : public AbstractComponent
+class VLAYOUT_EXPORT LabelComponent : public AbstractComponent
 {
 public:
     explicit LabelComponent(const QString& id);
@@ -68,7 +68,7 @@ private:
  * @class ButtonComponent
  * @brief 按钮组件，支持文本、图标和可选中状态
  */
-class ButtonComponent : public AbstractComponent
+class VLAYOUT_EXPORT ButtonComponent : public AbstractComponent
 {
 public:
     explicit ButtonComponent(const QString& id);
@@ -114,7 +114,7 @@ private:
  * @class CheckBoxComponent
  * @brief 复选框组件，支持勾选状态
  */
-class CheckBoxComponent : public AbstractComponent
+class VLAYOUT_EXPORT CheckBoxComponent : public AbstractComponent
 {
 public:
     explicit CheckBoxComponent(const QString& id);
@@ -142,7 +142,7 @@ private:
  * @class ProgressBarComponent
  * @brief 进度条组件，显示进度值
  */
-class ProgressBarComponent : public AbstractComponent
+class VLAYOUT_EXPORT ProgressBarComponent : public AbstractComponent
 {
 public:
     explicit ProgressBarComponent(const QString& id);
@@ -178,7 +178,7 @@ private:
  * @class IconComponent
  * @brief 图标组件，显示图标字体字符或纯色块
  */
-class IconComponent : public AbstractComponent
+class VLAYOUT_EXPORT IconComponent : public AbstractComponent
 {
 public:
     explicit IconComponent(const QString& id);
@@ -216,7 +216,7 @@ private:
  * @class BadgeComponent
  * @brief 徽章组件，显示小数字或文本标记
  */
-class BadgeComponent : public AbstractComponent
+class VLAYOUT_EXPORT BadgeComponent : public AbstractComponent
 {
 public:
     explicit BadgeComponent(const QString& id);
@@ -247,7 +247,7 @@ private:
  * @class SeparatorComponent
  * @brief 分隔线组件，用于分隔内容区域
  */
-class SeparatorComponent : public AbstractComponent
+class VLAYOUT_EXPORT SeparatorComponent : public AbstractComponent
 {
 public:
     explicit SeparatorComponent(const QString& id);
@@ -271,7 +271,7 @@ private:
  * @class AvatarComponent
  * @brief 头像组件，显示圆形头像或首字母
  */
-class AvatarComponent : public AbstractComponent
+class VLAYOUT_EXPORT AvatarComponent : public AbstractComponent
 {
 public:
     explicit AvatarComponent(const QString& id);
@@ -303,7 +303,7 @@ private:
  * @class SwitchComponent
  * @brief 开关组件，类似于滑动开关
  */
-class SwitchComponent : public AbstractComponent
+class VLAYOUT_EXPORT SwitchComponent : public AbstractComponent
 {
 public:
     explicit SwitchComponent(const QString& id);
@@ -331,7 +331,7 @@ private:
  * @class SliderComponent
  * @brief 滑动条组件，支持水平和垂直方向
  */
-class SliderComponent : public AbstractComponent
+class VLAYOUT_EXPORT SliderComponent : public AbstractComponent
 {
 public:
     explicit SliderComponent(const QString& id);
@@ -367,7 +367,7 @@ private:
  * @class ComboBoxComponent
  * @brief 下拉框组件，显示选项列表
  */
-class ComboBoxComponent : public AbstractComponent
+class VLAYOUT_EXPORT ComboBoxComponent : public AbstractComponent
 {
 public:
     explicit ComboBoxComponent(const QString& id);
@@ -406,7 +406,7 @@ private:
  * @class SpinBoxComponent
  * @brief 整数调节框组件
  */
-class SpinBoxComponent : public AbstractComponent
+class VLAYOUT_EXPORT SpinBoxComponent : public AbstractComponent
 {
 public:
     explicit SpinBoxComponent(const QString& id);
@@ -447,7 +447,7 @@ private:
  * @class RatingComponent
  * @brief 评分组件，显示星级评分
  */
-class RatingComponent : public AbstractComponent
+class VLAYOUT_EXPORT RatingComponent : public AbstractComponent
 {
 public:
     explicit RatingComponent(const QString& id);
@@ -494,7 +494,7 @@ private:
  * @class CircularProgressComponent
  * @brief 圆形进度指示器组件
  */
-class CircularProgressComponent : public AbstractComponent
+class VLAYOUT_EXPORT CircularProgressComponent : public AbstractComponent
 {
 public:
     explicit CircularProgressComponent(const QString& id);
@@ -534,7 +534,7 @@ private:
  * @class ImageComponent
  * @brief 图片组件，显示 QPixmap 图片
  */
-class ImageComponent : public AbstractComponent
+class VLAYOUT_EXPORT ImageComponent : public AbstractComponent
 {
 public:
     explicit ImageComponent(const QString& id);
@@ -570,7 +570,7 @@ private:
  * @class CardComponent
  * @brief 卡片组件，带背景和圆角的容器
  */
-class CardComponent : public AbstractComponent
+class VLAYOUT_EXPORT CardComponent : public AbstractComponent
 {
 public:
     explicit CardComponent(const QString& id);
@@ -610,7 +610,7 @@ private:
  * @class SpacerComponent
  * @brief 占位组件，用于布局中占用空间但不绘制任何内容
  */
-class SpacerComponent : public AbstractComponent
+class VLAYOUT_EXPORT SpacerComponent : public AbstractComponent
 {
 public:
     explicit SpacerComponent(const QString& id);
@@ -628,7 +628,7 @@ public:
  * @class ExpandArrowComponent
  * @brief 展开/折叠箭头组件，用于树形结构
  */
-class ExpandArrowComponent : public AbstractComponent
+class VLAYOUT_EXPORT ExpandArrowComponent : public AbstractComponent
 {
 public:
     explicit ExpandArrowComponent(const QString& id);
@@ -646,7 +646,7 @@ public:
  * @class DecorationIconComponent
  * @brief QIcon 装饰图标组件，显示 Qt 标准图标
  */
-class DecorationIconComponent : public AbstractComponent
+class VLAYOUT_EXPORT DecorationIconComponent : public AbstractComponent
 {
 public:
     explicit DecorationIconComponent(const QString& id);

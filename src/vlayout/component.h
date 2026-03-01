@@ -9,6 +9,7 @@
  * 组件是可绘制的 UI 元素，用于在 Delegate 中实现自定义绘制。
  */
 
+#include "vlayout/global.h"
 #include <QString>
 #include <QRect>
 #include <QSize>
@@ -163,7 +164,7 @@ struct ComponentContext {
  * - 属性（setProperty, property）
  * - 数据绑定（setData, data）
  */
-class IComponent
+class VLAYOUT_EXPORT IComponent
 {
 public:
     virtual ~IComponent() = default;
@@ -283,7 +284,7 @@ public:
  * };
  * \endcode
  */
-class AbstractComponent : public IComponent
+class VLAYOUT_EXPORT AbstractComponent : public IComponent
 {
 public:
     /**

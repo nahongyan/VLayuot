@@ -22,10 +22,10 @@ DelegateController::~DelegateController()
 // 组件管理
 // ============================================================================
 
-DelegateController& DelegateController::addComponent(std::shared_ptr<IComponent> component)
+DelegateController& DelegateController::addComponent(std::shared_ptr<IComponent> component) const
 {
     if (!component) {
-        return *this;
+        return const_cast<DelegateController&>(*this);
     }
 
     // 添加到映射表和指针列表
@@ -36,7 +36,7 @@ DelegateController& DelegateController::addComponent(std::shared_ptr<IComponent>
     m_components.push_back(std::move(component));
 
     m_bindingCacheDirty = true;
-    return *this;
+    return const_cast<DelegateController&>(*this);
 }
 
 IComponent* DelegateController::component(const QString& id) const
@@ -45,11 +45,26 @@ IComponent* DelegateController::component(const QString& id) const
     return it != m_componentMap.end() ? it->second : nullptr;
 }
 
+void DelegateController::clearComponents() const
+{
+    m_components.clear();
+    m_componentMap.clear();
+    m_componentPtrs.clear();
+    m_rowItems.clear();
+    m_autoBindings.clear();
+    m_bindingBuilders.clear();
+    m_cachedBindings.clear();
+    m_bindingCacheDirty = true;
+    m_simpleLayout = false;
+    // 重置布局引擎（设置空描述符）
+    m_layoutEngine.setDescriptor(LayoutItemDescriptor());
+}
+
 // ============================================================================
 // 声明式布局
 // ============================================================================
 
-void DelegateController::setLayout(const LayoutItemDescriptor& descriptor)
+void DelegateController::setLayout(const LayoutItemDescriptor& descriptor) const
 {
     m_layoutEngine.setDescriptor(descriptor);
     m_simpleLayout = false;
@@ -64,35 +79,35 @@ bool DelegateController::hasAutoLayout() const
 // 极简行布局 API
 // ============================================================================
 
-void DelegateController::setRow(std::initializer_list<RI> items)
+void DelegateController::setRow(std::initializer_list<RI> items) const
 {
     m_rowItems.assign(items.begin(), items.end());
     m_simpleLayout = true;
     rebuildRowLayout();
 }
 
-void DelegateController::addSpacing(int width)
+void DelegateController::addSpacing(int width) const
 {
     m_rowItems.push_back(RI("", width));
     m_simpleLayout = true;
     rebuildRowLayout();
 }
 
-void DelegateController::addStretch(int stretch)
+void DelegateController::addStretch(int stretch) const
 {
     m_rowItems.push_back(RI("", -stretch));
     m_simpleLayout = true;
     rebuildRowLayout();
 }
 
-void DelegateController::setMargins(int horizontal, int vertical)
+void DelegateController::setMargins(int horizontal, int vertical) const
 {
     m_marginLeft = m_marginRight = horizontal;
     m_marginTop = m_marginBottom = vertical;
     if (m_simpleLayout) rebuildRowLayout();
 }
 
-void DelegateController::setMargins(int left, int top, int right, int bottom)
+void DelegateController::setMargins(int left, int top, int right, int bottom) const
 {
     m_marginLeft = left;
     m_marginTop = top;
@@ -101,19 +116,19 @@ void DelegateController::setMargins(int left, int top, int right, int bottom)
     if (m_simpleLayout) rebuildRowLayout();
 }
 
-void DelegateController::setSpacing(int spacing)
+void DelegateController::setSpacing(int spacing) const
 {
     m_rowSpacing = spacing;
     if (m_simpleLayout) rebuildRowLayout();
 }
 
-void DelegateController::setRowHeight(int height)
+void DelegateController::setRowHeight(int height) const
 {
     // width=1 通过 isValid() 检查，实际宽度由视图控制
     m_fixedSizeHint = QSize(1, height);
 }
 
-void DelegateController::rebuildRowLayout()
+void DelegateController::rebuildRowLayout() const
 {
     LayoutItemList list;
     list.reserve(m_rowItems.size());
@@ -152,7 +167,7 @@ void DelegateController::rebuildRowLayout()
 // 声明式数据绑定
 // ============================================================================
 
-BindingBuilder& DelegateController::bindTo(const QString& componentId)
+BindingBuilder& DelegateController::bindTo(const QString& componentId) const
 {
     auto it = m_bindingBuilders.find(componentId);
     if (it == m_bindingBuilders.end()) {
@@ -170,12 +185,12 @@ BindingBuilder& DelegateController::bindTo(const QString& componentId)
 // 声明式事件处理
 // ============================================================================
 
-void DelegateController::onClick(const QString& componentId, ClickHandler handler)
+void DelegateController::onClick(const QString& componentId, ClickHandler handler) const
 {
     m_clickHandlers[componentId] = std::move(handler);
 }
 
-void DelegateController::onAnyClick(ClickHandler handler)
+void DelegateController::onAnyClick(ClickHandler handler) const
 {
     m_anyClickHandler = std::move(handler);
 }
@@ -184,7 +199,7 @@ void DelegateController::onAnyClick(ClickHandler handler)
 // 便捷方法
 // ============================================================================
 
-void DelegateController::setFixedSizeHint(const QSize& size)
+void DelegateController::setFixedSizeHint(const QSize& size) const
 {
     m_fixedSizeHint = size;
 }
@@ -326,9 +341,16 @@ bool DelegateController::editorEvent(QEvent* event, QAbstractItemModel* model,
     case QEvent::MouseMove: {
         auto* me = static_cast<QMouseEvent*>(event);
         QString newHovered;
+        QString newClickableHovered;
 
         if (auto* comp = hitTestComponent(me->pos())) {
             newHovered = comp->id();
+            // 检查是否悬停在可点击组件上
+            if (m_clickHandlers.count(comp->id()) > 0 ||
+                (m_autoBindings.count(comp->id()) > 0 &&
+                 m_autoBindings[comp->id()]->clickCallback())) {
+                newClickableHovered = comp->id();
+            }
             if (newHovered != m_hoveredComponentId) {
                 comp->setState(ComponentState::Hovered, true);
                 comp->onMouseEnter();
@@ -341,6 +363,17 @@ bool DelegateController::editorEvent(QEvent* event, QAbstractItemModel* model,
                 oldComp->setState(ComponentState::Hovered, false);
                 oldComp->onMouseLeave();
             }
+        }
+
+        // 处理可点击组件悬停状态变更（用于手型光标）
+        if (newClickableHovered != m_hoveredClickableId) {
+            if (!m_hoveredClickableId.isEmpty()) {
+                emit clickableHoverChanged(m_hoveredClickableId, false);
+            }
+            if (!newClickableHovered.isEmpty()) {
+                emit clickableHoverChanged(newClickableHovered, true);
+            }
+            m_hoveredClickableId = newClickableHovered;
         }
 
         m_hoveredComponentId = newHovered;

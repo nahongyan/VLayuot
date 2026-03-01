@@ -105,7 +105,7 @@ using ClickHandler = std::function<void(const QModelIndex& index, IComponent* co
  * ## 事件处理
  * 使用 onClick() 声明点击事件处理函数。
  */
-class DelegateController : public QStyledItemDelegate
+class VLAYOUT_EXPORT DelegateController : public QStyledItemDelegate
 {
     Q_OBJECT
 
@@ -120,7 +120,7 @@ public:
      * @param component 组件共享指针
      * @return 自身引用，支持链式调用
      */
-    DelegateController& addComponent(std::shared_ptr<IComponent> component);
+    DelegateController& addComponent(std::shared_ptr<IComponent> component) const;
 
     /**
      * @brief 获取组件
@@ -161,12 +161,12 @@ public:
      */
     template<typename T>
     DelegateController& addItem(const QString& id, int width = 0,
-                                Qt::Alignment align = {}) {
+                                Qt::Alignment align = {}) const {
         addComponent(std::make_shared<T>(id));
         m_rowItems.push_back(RI(id, width, align));
         m_simpleLayout = true;
         rebuildRowLayout();
-        return *this;
+        return const_cast<DelegateController&>(*this);
     }
 
     /**
@@ -184,13 +184,20 @@ public:
     /// 返回内部组件裸指针列表（无堆分配）
     const std::vector<IComponent*>& components() const { return m_componentPtrs; }
 
+    /**
+     * @brief 清除所有组件和布局
+     *
+     * 用于动态切换布局时重置 delegate 状态。
+     */
+    void clearComponents() const;
+
     // ========== 声明式布局 ==========
 
     /**
      * @brief 高级 API：设置任意嵌套布局
      * @param descriptor 布局描述符
      */
-    void setLayout(const LayoutItemDescriptor& descriptor);
+    void setLayout(const LayoutItemDescriptor& descriptor) const;
 
     /// 检查是否已设置自动布局
     bool hasAutoLayout() const;
@@ -204,43 +211,43 @@ public:
      * setRow({{"arrow",16}, {"name"}, {"badge",18}, {"",8}});
      * @endcode
      */
-    void setRow(std::initializer_list<RI> items);
+    void setRow(std::initializer_list<RI> items) const;
 
     /**
      * @brief 追加匿名间距（无组件占位，等同 QBoxLayout::addSpacing）
      * @param width 间距宽度（像素）
      */
-    void addSpacing(int width);
+    void addSpacing(int width) const;
 
     /**
      * @brief 追加弹簧（等同 QBoxLayout::addStretch，占满剩余空间）
      * @param stretch stretch 因子
      */
-    void addStretch(int stretch = 1);
+    void addStretch(int stretch = 1) const;
 
     /**
      * @brief 设置行内边距（水平/垂直各一值）
      * @param horizontal 水平边距
      * @param vertical 垂直边距
      */
-    void setMargins(int horizontal, int vertical);
+    void setMargins(int horizontal, int vertical) const;
 
     /**
      * @brief 设置行内边距（四边分别指定）
      */
-    void setMargins(int left, int top, int right, int bottom);
+    void setMargins(int left, int top, int right, int bottom) const;
 
     /**
      * @brief 设置组件间间距
      * @param spacing 间距像素值
      */
-    void setSpacing(int spacing);
+    void setSpacing(int spacing) const;
 
     /**
      * @brief 设置固定行高（列表/树视图用）
      * @param height 行高像素值
      */
-    void setRowHeight(int height);
+    void setRowHeight(int height) const;
 
     // ========== 声明式数据绑定 ==========
 
@@ -249,7 +256,7 @@ public:
      * @param componentId 组件标识符
      * @return 绑定构建器引用
      */
-    BindingBuilder& bindTo(const QString& componentId);
+    BindingBuilder& bindTo(const QString& componentId) const;
 
     // ========== 声明式事件处理 ==========
 
@@ -258,18 +265,18 @@ public:
      * @param componentId 组件标识符
      * @param handler 事件处理函数
      */
-    void onClick(const QString& componentId, ClickHandler handler);
+    void onClick(const QString& componentId, ClickHandler handler) const;
 
     /**
      * @brief 设置任意组件点击事件处理
      * @param handler 事件处理函数
      */
-    void onAnyClick(ClickHandler handler);
+    void onAnyClick(ClickHandler handler) const;
 
     // ========== 便捷方法 ==========
 
     /// 设置固定 sizeHint（同时设置宽高）
-    void setFixedSizeHint(const QSize& size);
+    void setFixedSizeHint(const QSize& size) const;
 
     /// 切换布尔类型数据
     static void toggleData(const QModelIndex& index, int role);
@@ -300,6 +307,9 @@ signals:
     void componentStateChanged(const QModelIndex& index, const QString& componentId,
                                ComponentState state, bool on);
 
+    /// 可点击组件悬停状态变化信号（用于设置手型光标）
+    void clickableHoverChanged(const QString& componentId, bool hovered);
+
 private:
     /// 分发点击事件
     void dispatchClick(const QModelIndex& index, IComponent* comp);
@@ -317,18 +327,18 @@ protected:
 private:
     // ========== 组件存储 ==========
 
-    std::vector<std::shared_ptr<IComponent>> m_components;      // 拥有组件
-    std::unordered_map<QString, IComponent*> m_componentMap;    // 快速查找
-    std::vector<IComponent*> m_componentPtrs;                   // 缓存裸指针
+    mutable std::vector<std::shared_ptr<IComponent>> m_components;      // 拥有组件
+    mutable std::unordered_map<QString, IComponent*> m_componentMap;    // 快速查找
+    mutable std::vector<IComponent*> m_componentPtrs;                   // 缓存裸指针
 
     // ========== 布局 ==========
 
-    LayoutEngine m_layoutEngine;
+    mutable LayoutEngine m_layoutEngine;
 
     // ========== 绑定 ==========
 
-    std::unordered_map<QString, std::unique_ptr<BindingBuilder>> m_bindingBuilders;
-    std::unordered_map<QString, std::shared_ptr<ComponentBinding>> m_autoBindings;
+    mutable std::unordered_map<QString, std::unique_ptr<BindingBuilder>> m_bindingBuilders;
+    mutable std::unordered_map<QString, std::shared_ptr<ComponentBinding>> m_autoBindings;
 
     /// 缓存的绑定对 {comp*, binding*}
     struct CachedBinding {
@@ -340,29 +350,30 @@ private:
 
     // ========== 简单行布局 ==========
 
-    std::vector<RI> m_rowItems;
-    int m_marginLeft = 0;
-    int m_marginTop = 0;
-    int m_marginRight = 0;
-    int m_marginBottom = 0;
-    int m_rowSpacing = 4;
-    bool m_simpleLayout = false;
+    mutable std::vector<RI> m_rowItems;
+    mutable int m_marginLeft = 0;
+    mutable int m_marginTop = 0;
+    mutable int m_marginRight = 0;
+    mutable int m_marginBottom = 0;
+    mutable int m_rowSpacing = 4;
+    mutable bool m_simpleLayout = false;
 
-    void rebuildRowLayout();
+    void rebuildRowLayout() const;
 
     // ========== 事件 ==========
 
-    std::unordered_map<QString, ClickHandler> m_clickHandlers;
-    ClickHandler m_anyClickHandler;
+    mutable std::unordered_map<QString, ClickHandler> m_clickHandlers;
+    mutable ClickHandler m_anyClickHandler;
 
     // ========== sizeHint ==========
 
-    QSize m_fixedSizeHint;
+    mutable QSize m_fixedSizeHint;
 
     // ========== 交互状态 ==========
 
     mutable QModelIndex m_currentIndex;
     QString m_hoveredComponentId;
+    QString m_hoveredClickableId;
     QString m_pressedComponentId;
 
     // ========== 复用上下文 ==========

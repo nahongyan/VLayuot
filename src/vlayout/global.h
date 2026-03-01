@@ -92,7 +92,4 @@ namespace Version {
 #  define VLAYOUT_EXPORT
 #endif
 
-/// 便捷宏：声明导出类
-#define VLAYOUT_CLASS VLAYOUT_EXPORT
-
 #endif // VLAYOUT_GLOBAL_H
