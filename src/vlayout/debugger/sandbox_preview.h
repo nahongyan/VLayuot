@@ -100,13 +100,18 @@ public:
 
 signals:
     void itemClicked(int index);
+    void itemDoubleClicked(int index);
     void layoutComputed(const QString& summary);
+    void containerSizeChanged(int width, int height);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void contextMenuEvent(const QPoint& pos);
 
 private:
     // ========== 绘制方法 ==========
