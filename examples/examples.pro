@@ -2,4 +2,5 @@ TEMPLATE = subdirs
 
 SUBDIRS += \
     vs_recent \
-    timeline
+    timeline \
+    debugger

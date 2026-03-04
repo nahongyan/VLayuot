@@ -28,3 +28,8 @@ SOURCES += \
     $$PWD/component.cpp \
     $$PWD/delegatecontroller.cpp \
     $$PWD/components.cpp
+
+# 调试器模块（通过 DEFINES += VLAYOUT_DEBUGGER 启用）
+contains(DEFINES, VLAYOUT_DEBUGGER) {
+    include($$PWD/debugger/debugger.pri)
+}

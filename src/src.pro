@@ -46,3 +46,18 @@ HEADERS += \
 INCLUDEPATH += $$PWD
 
 DEFINES += VLAYOUT_SHARED VLAYOUT_BUILD
+
+# 调试器模块（Debug 构建时自动启用）
+CONFIG(debug, debug|release) {
+    DEFINES += VLAYOUT_DEBUGGER
+}
+
+contains(DEFINES, VLAYOUT_DEBUGGER) {
+    SOURCES += \
+        vlayout/debugger/sandbox_preview.cpp \
+        vlayout/debugger/sandbox_widget.cpp
+
+    HEADERS += \
+        vlayout/debugger/sandbox_preview.h \
+        vlayout/debugger/sandbox_widget.h
+}
