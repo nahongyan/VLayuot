@@ -5,15 +5,12 @@
 #include <QPaintEvent>
 #include <QMouseEvent>
 #include <QToolTip>
-#include <QMenu>
-#include <QAction>
-#include <QInputDialog>
 #include <cmath>
 
 namespace VLayout {
 
 // ============================================================================
-// 鸸色常量
+// 颜色常量
 // ============================================================================
 
 namespace {
@@ -29,7 +26,7 @@ namespace {
 
     const QColor SelectedColor(255, 235, 59, 180);  // 黄色高亮
     const QColor HoverColor(255, 255, 255, 80);     // 悬停效果
-    const QColor MarginColor(200, 50, 50, 60);    // Margin 区域颜色（红色半透明）
+    const QColor MarginColor(200, 50, 50, 60);      // Margin 区域颜色
     const QColor SpacingIndicatorColor(100, 100, 200, 80); // Spacing 指示器颜色
 }
 
@@ -42,42 +39,6 @@ SandboxPreview::SandboxPreview(QWidget* parent)
 {
     setMouseTracking(true);
     setMinimumSize(300, 200);
-
-    // 初始化右键菜单
-    m_contextMenu = std::make_unique<QMenu>(this);
-
-    auto* insertAction = m_contextMenu->addAction(tr("在当前位置插入"));
-    connect(insertAction, &QAction::triggered, this, [this]() {
-        bool ok;
-        QString id = QInputDialog::getText(this, tr("插入布局项"),
-                                           tr("ID:"), QLineEdit::Normal, "new_item", &ok);
-        if (!ok) return;
-
-        int sizeHint = QInputDialog::getInt(this, tr("插入布局项"),
-                                              tr("SizeHint:"), 40, 0, 1000, 1, &ok);
-        if (!ok) return;
-
-        SandboxItem item;
-        item.id = id;
-        item.sizeHint = sizeHint;
-        item.pos = m_items.empty() ? 0 : m_items.back().pos + m_items.back().size + m_spacing;
-
-        m_items.push_back(item);
-        computeLayout();
-        update();
-        emit layoutComputed(m_diagnosticText);
-    });
-
-    auto* deleteAction = m_contextMenu->addAction(tr("删除选中项"));
-    connect(deleteAction, &QAction::triggered, this, [this]() {
-        if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_items.size())) {
-            m_items.erase(m_items.begin() + m_selectedIndex);
-            m_selectedIndex = -1;
-            computeLayout();
-            update();
-            emit layoutComputed(m_diagnosticText);
-        }
-    });
 }
 
 SandboxPreview::~SandboxPreview() = default;
@@ -89,7 +50,6 @@ void SandboxPreview::setContainerSize(int width, int height)
     m_containerSize = QSize(width, height);
     computeLayout();
     update();
-    emit containerSizeChanged(width, height);
 }
 
 void SandboxPreview::setMargins(int left, int top, int right, int bottom)
@@ -158,6 +118,7 @@ void SandboxPreview::computeLayout()
 {
     if (m_items.empty()) {
         m_diagnosticText = tr("无布局项");
+        emit layoutComputed(m_diagnosticText);
         return;
     }
 
@@ -170,7 +131,7 @@ void SandboxPreview::computeLayout()
 
     // 构建 LayoutStruct 数组用于计算
     std::vector<LayoutStruct> structs;
-    structs.reserve(m_items.size() * 2 - 1);
+    structs.reserve(m_items.size());
 
     for (size_t i = 0; i < m_items.size(); ++i) {
         const auto& item = m_items[i];
@@ -204,7 +165,6 @@ void SandboxPreview::computeLayout()
 
     // 执行布局计算（简化版 qGeomCalc）
     int pos = 0;
-    int space = available;
 
     // 第一遍：分配 sizeHint
     for (size_t i = 0; i < structs.size(); ++i) {
@@ -253,45 +213,24 @@ void SandboxPreview::computeLayout()
     diagnostics << tr("容器可用空间: %1px").arg(available);
     diagnostics << tr("项总需求: %1px | 最小需求: %2px").arg(totalHint).arg(totalMinSize);
 
-    diagnostics << QString(); // 空行
-
     for (size_t i = 0; i < m_items.size(); ++i) {
         m_items[i].pos = structs[i].pos;
         m_items[i].size = structs[i].size;
         m_items[i].isCompressed = (m_items[i].size < m_items[i].sizeHint);
         m_items[i].isOverflow = (m_items[i].size < m_items[i].minSize);
-
-        // 诊断信息
-        QString status;
-        if (m_items[i].isOverflow) {
-            status = tr("⚠ 溢出 (小于最小尺寸)");
-        } else if (m_items[i].isCompressed) {
-            status = tr("⚠ 压缩 (小于期望尺寸)");
-        } else if (m_items[i].stretch > 0) {
-            status = tr("✓ 拉伸分配");
-        } else {
-            status = tr("✓ 固定尺寸");
-        }
-
-        diagnostics << tr("  [%1] pos=%2, size=%3, hint=%4 → %5")
-            .arg(m_items[i].id)
-            .arg(m_items[i].pos)
-            .arg(m_items[i].size)
-            .arg(m_items[i].sizeHint)
-            .arg(status);
     }
 
     if (remaining >= 0) {
-        diagnostics << QString() << tr("✓ 布局空间充足，剩余 %1px").arg(remaining);
+        diagnostics << tr("布局空间充足，剩余 %1px").arg(remaining);
     } else {
-        diagnostics << QString() << tr("✗ 空间不足 %1px").arg(-remaining);
+        diagnostics << tr("⚠ 空间不足 %1px").arg(-remaining);
     }
 
     m_diagnosticText = diagnostics.join("\n");
     emit layoutComputed(m_diagnosticText);
 }
 
-// ========== 事件处理 ==========
+// ========== 绘制事件 ==========
 
 void SandboxPreview::paintEvent(QPaintEvent* event)
 {
@@ -313,25 +252,18 @@ void SandboxPreview::paintEvent(QPaintEvent* event)
     // 绘制标尺
     drawRuler(painter, contentRect);
 
-    // 绘制 margin 区域指示器
-    drawMarginIndicator(painter, contentRect);
+    // 绘制 margin 指示器
+    drawGrid(painter, contentRect);
 
     // 绘制布局项
     drawLayoutItems(painter, contentRect);
-
-    // 绘制 spacing 指示器
-    drawSpacingIndicator(painter, contentRect);
 }
+
+// ========== 鼠标事件 ==========
 
 void SandboxPreview::mouseMoveEvent(QMouseEvent* event)
 {
     int index = itemAtPosition(event->pos());
-
-    // 处理拖拽
-    if (m_dragging && m_dragHandle >= 0) {
-        // TODO: 实现拖拽调整大小
-        // 这里可以添加拖拽逻辑
-    }
 
     if (index != m_hoverIndex) {
         m_hoverIndex = index;
@@ -352,9 +284,8 @@ void SandboxPreview::mouseMoveEvent(QMouseEvent* event)
 
 void SandboxPreview::mousePressEvent(QMouseEvent* event)
 {
-    int index = itemAtPosition(event->pos());
-
     if (event->button() == Qt::LeftButton) {
+        int index = itemAtPosition(event->pos());
         if (index >= 0) {
             m_selectedIndex = index;
             emit itemClicked(index);
@@ -366,22 +297,15 @@ void SandboxPreview::mousePressEvent(QMouseEvent* event)
 void SandboxPreview::mouseReleaseEvent(QMouseEvent* event)
 {
     Q_UNUSED(event);
-    if (m_dragging) {
-        m_dragging = false;
-        m_dragHandle = -1;
-        if (m_originalCursor.shape() != Qt::ArrowCursor) {
-            setCursor(m_originalCursor);
-        }
-        update();
-    }
 }
 
 void SandboxPreview::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    int index = itemAtPosition(event->pos());
-
-    if (index >= 0) {
-        emit itemDoubleClicked(index);
+    if (event->button() == Qt::LeftButton) {
+        int index = itemAtPosition(event->pos());
+        if (index >= 0) {
+            emit itemDoubleClicked(index);
+        }
     }
 }
 
@@ -395,12 +319,8 @@ void SandboxPreview::leaveEvent(QEvent* event)
 
 void SandboxPreview::contextMenuEvent(const QPoint& pos)
 {
-    int index = itemAtPosition(pos);
-    if (index >= 0) {
-        m_selectedIndex = index;
-        update();
-        m_contextMenu->exec(mapToGlobal(pos));
-    }
+    Q_UNUSED(pos);
+    // 右键菜单功能暂时禁用
 }
 
 // ========== 绘制方法 ==========
@@ -465,6 +385,69 @@ void SandboxPreview::drawLayoutItems(QPainter& painter, const QRect& contentRect
 {
     bool isHorizontal = (m_direction == BoxLayout::Direction::LeftToRight);
 
+    // 先绘制 margin 区域
+    painter.save();
+    painter.setOpacity(0.3);
+
+    // 左 margin
+    if (m_leftMargin > 0) {
+        QRect leftMarginRect(contentRect.left(), contentRect.top(),
+                             m_leftMargin, contentRect.height());
+        painter.fillRect(leftMarginRect, MarginColor);
+    }
+
+    // 右 margin
+    if (m_rightMargin > 0) {
+        int left = contentRect.left() + m_leftMargin +
+                   (m_containerSize.width() - m_leftMargin - m_rightMargin);
+        QRect rightMarginRect(left, contentRect.top(),
+                              m_rightMargin, contentRect.height());
+        painter.fillRect(rightMarginRect, MarginColor);
+    }
+
+    // 上 margin
+    if (m_topMargin > 0) {
+        QRect topMarginRect(contentRect.left() + m_leftMargin, contentRect.top(),
+                            m_containerSize.width() - m_leftMargin - m_rightMargin, m_topMargin);
+        painter.fillRect(topMarginRect, MarginColor);
+    }
+
+    // 下 margin
+    if (m_bottomMargin > 0) {
+        int top = contentRect.top() + m_topMargin +
+                  (m_containerSize.height() - m_topMargin - m_bottomMargin);
+        QRect bottomMarginRect(contentRect.left() + m_leftMargin, top,
+                               m_containerSize.width() - m_leftMargin - m_rightMargin, m_bottomMargin);
+        painter.fillRect(bottomMarginRect, MarginColor);
+    }
+
+    painter.restore();
+
+    // 绘制 spacing 区域
+    if (m_spacing > 0 && m_items.size() > 1) {
+        painter.save();
+        painter.setOpacity(0.3);
+
+        for (size_t i = 0; i < m_items.size() - 1; ++i) {
+            const auto& item = m_items[i];
+
+            if (isHorizontal) {
+                int spacingStart = contentRect.left() + m_leftMargin + item.pos + item.size;
+                QRect spacingRect(spacingStart, contentRect.top() + m_topMargin,
+                                  m_spacing, m_containerSize.height() - m_topMargin - m_bottomMargin);
+                painter.fillRect(spacingRect, SpacingIndicatorColor);
+            } else {
+                int spacingStart = contentRect.top() + m_topMargin + item.pos + item.size;
+                QRect spacingRect(contentRect.left() + m_leftMargin, spacingStart,
+                                  m_containerSize.width() - m_leftMargin - m_rightMargin, m_spacing);
+                painter.fillRect(spacingRect, SpacingIndicatorColor);
+            }
+        }
+
+        painter.restore();
+    }
+
+    // 绘制布局项
     for (size_t i = 0; i < m_items.size(); ++i) {
         const auto& item = m_items[i];
 
@@ -534,97 +517,6 @@ void SandboxPreview::drawSingleItem(QPainter& painter, const QRect& itemRect,
     painter.restore();
 }
 
-void SandboxPreview::drawMarginIndicator(QPainter& painter, const QRect& contentRect)
-{
-    // 绘制 margin 区域（半透明红色斜线）
-    painter.save();
-
-    QPen pen(MarginColor, 1, Qt::DashLine);
-    painter.setPen(pen);
-
-    // 左 margin
-    if (m_leftMargin > 0) {
-        QRect leftRect(contentRect.left(), contentRect.top(),
-                       m_leftMargin, contentRect.height());
-        painter.fillRect(leftRect, MarginColor);
-        painter.drawRect(leftRect);
-    }
-
-    // 右 margin
-    if (m_rightMargin > 0) {
-        int left = contentRect.left() + m_leftMargin + m_containerSize.width() - m_leftMargin - m_rightMargin;
-        QRect rightRect(left, contentRect.top(),
-                       m_rightMargin, contentRect.height());
-        painter.fillRect(rightRect, MarginColor);
-        painter.drawRect(rightRect);
-    }
-
-    // 上 margin
-    if (m_topMargin > 0) {
-        QRect topRect(contentRect.left() + m_leftMargin, contentRect.top(),
-                      m_containerSize.width() - m_leftMargin - m_rightMargin, m_topMargin);
-        painter.fillRect(topRect, MarginColor);
-        painter.drawRect(topRect);
-    }
-
-    // 下 margin
-    if (m_bottomMargin > 0) {
-        int top = contentRect.top() + m_topMargin + m_containerSize.height() - m_topMargin - m_bottomMargin;
-        QRect bottomRect(contentRect.left() + m_leftMargin, top,
-                         m_containerSize.width() - m_leftMargin - m_rightMargin, m_bottomMargin);
-        painter.fillRect(bottomRect, MarginColor);
-        painter.drawRect(bottomRect);
-    }
-
-    painter.restore();
-}
-
-void SandboxPreview::drawSpacingIndicator(QPainter& painter, const QRect& contentRect)
-{
-    if (m_spacing <= 0 || m_items.size() < 2) return;
-
-    painter.save();
-
-    bool isHorizontal = (m_direction == BoxLayout::Direction::LeftToRight);
-
-    // 绘制 spacing 区域（半透明蓝色斜线）
-    QPen pen(SpacingIndicatorColor, 1, Qt::DashLine);
-    painter.setPen(pen);
-
-    for (size_t i = 0; i < m_items.size() - 1; ++i) {
-        const auto& item = m_items[i];
-        int spacingStart, spacingEnd;
-
-        if (isHorizontal) {
-            spacingStart = contentRect.left() + m_leftMargin + item.pos + item.size;
-            spacingEnd = spacingStart + m_spacing;
-
-            QRect spacingRect(spacingStart, contentRect.top() + m_topMargin,
-                              m_spacing, m_containerSize.height() - m_topMargin - m_bottomMargin);
-            painter.fillRect(spacingRect, SpacingIndicatorColor);
-            painter.drawRect(spacingRect);
-
-            // 标注尺寸
-            painter.setPen(Qt::blue);
-            painter.drawText(spacingRect, Qt::AlignCenter, QString("%1px").arg(m_spacing));
-        } else {
-            spacingStart = contentRect.top() + m_topMargin + item.pos + item.size;
-            spacingEnd = spacingStart + m_spacing;
-
-            QRect spacingRect(contentRect.left() + m_leftMargin, spacingStart,
-                              m_containerSize.width() - m_leftMargin - m_rightMargin, m_spacing);
-            painter.fillRect(spacingRect, SpacingIndicatorColor);
-            painter.drawRect(spacingRect);
-
-            // 标注尺寸
-            painter.setPen(Qt::blue);
-            painter.drawText(spacingRect, Qt::AlignCenter, QString("%1px").arg(m_spacing));
-        }
-    }
-
-    painter.restore();
-}
-
 QColor SandboxPreview::itemColor(const SandboxItem& item) const
 {
     if (item.isSpacing) {
@@ -646,7 +538,6 @@ QColor SandboxPreview::itemColor(const SandboxItem& item) const
 
 QRect SandboxPreview::mapToPreview(const QRect& layoutRect, const QRect& contentRect) const
 {
-    // 简单的 1:1 映射
     return QRect(
         contentRect.left() + layoutRect.left(),
         contentRect.top() + layoutRect.top(),
@@ -690,3 +581,4 @@ int SandboxPreview::itemAtPosition(const QPoint& pos) const
     return -1;
 }
 
+} // namespace VLayout
