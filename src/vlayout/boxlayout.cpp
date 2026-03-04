@@ -129,8 +129,10 @@ void BoxLayout::setupLayoutData() const
     m_layoutStructs.resize(n);
 
     // 累计值
-    int maxW = horiz ? 0 : SizeMax;
-    int maxH = horiz ? SizeMax : 0;
+    // 对于非布局方向的尺寸，初始值为 0，然后在循环中取最大值
+    // 对于布局方向的尺寸，初始值为 0，然后在循环中累加
+    int maxW = 0;
+    int maxH = 0;
     int minW = 0;
     int minH = 0;
     int hintW = 0;
@@ -140,14 +142,15 @@ void BoxLayout::setupLayoutData() const
     bool vExp = false;
 
     int prevNonEmpty = -1;
+    bool firstNonEmpty = true;
 
     for (int i = 0; i < n; ++i) {
         const auto& item = m_items[i];
         LayoutStruct& ls = m_layoutStructs[i];
 
-        const QSize max = item->maximumSize();
-        const QSize min = item->minimumSize();
-        const QSize hint = item->sizeHint();
+        const QSize itemMax = item->maximumSize();
+        const QSize itemMin = item->minimumSize();
+        const QSize itemHint = item->sizeHint();
         const Qt::Orientations exp = item->expandingDirections();
         const bool empty = item->isEmpty();
 
@@ -168,20 +171,27 @@ void BoxLayout::setupLayoutData() const
             const bool expand = (exp & Qt::Horizontal) || item->stretch() > 0;
             hExp = hExp || expand;
 
-            maxW += spacing + max.width();
-            minW += spacing + min.width();
-            hintW += spacing + hint.width();
+            // 布局方向：累加
+            maxW += spacing + itemMax.width();
+            minW += spacing + itemMin.width();
+            hintW += spacing + itemHint.width();
 
             if (!ignore) {
-                maxH = qMax(maxH, max.height());
+                // 非布局方向：取最大值
+                if (firstNonEmpty) {
+                    maxH = itemMax.height();
+                    firstNonEmpty = false;
+                } else {
+                    maxH = qMax(maxH, itemMax.height());
+                }
                 vExp = vExp || (exp & Qt::Vertical);
             }
-            minH = qMax(minH, min.height());
-            hintH = qMax(hintH, hint.height());
+            minH = qMax(minH, itemMin.height());
+            hintH = qMax(hintH, itemHint.height());
 
-            ls.sizeHint = hint.width();
-            ls.maximumSize = max.width();
-            ls.minimumSize = min.width();
+            ls.sizeHint = itemHint.width();
+            ls.maximumSize = itemMax.width();
+            ls.minimumSize = itemMin.width();
             ls.expansive = expand;
             ls.stretch = item->stretch();
         } else {
@@ -189,20 +199,27 @@ void BoxLayout::setupLayoutData() const
             const bool expand = (exp & Qt::Vertical) || item->stretch() > 0;
             vExp = vExp || expand;
 
-            maxH += spacing + max.height();
-            minH += spacing + min.height();
-            hintH += spacing + hint.height();
+            // 布局方向：累加
+            maxH += spacing + itemMax.height();
+            minH += spacing + itemMin.height();
+            hintH += spacing + itemHint.height();
 
             if (!ignore) {
-                maxW = qMax(maxW, max.width());
+                // 非布局方向：取最大值
+                if (firstNonEmpty) {
+                    maxW = itemMax.width();
+                    firstNonEmpty = false;
+                } else {
+                    maxW = qMax(maxW, itemMax.width());
+                }
                 hExp = hExp || (exp & Qt::Horizontal);
             }
-            minW = qMax(minW, min.width());
-            hintW = qMax(hintW, hint.width());
+            minW = qMax(minW, itemMin.width());
+            hintW = qMax(hintW, itemHint.width());
 
-            ls.sizeHint = hint.height();
-            ls.maximumSize = max.height();
-            ls.minimumSize = min.height();
+            ls.sizeHint = itemHint.height();
+            ls.maximumSize = itemMax.height();
+            ls.minimumSize = itemMin.height();
             ls.expansive = expand;
             ls.stretch = item->stretch();
         }
@@ -535,27 +552,129 @@ void BoxLayout::doLayout(const QRect& rect)
     // 应用几何位置到子项
     for (int i = 0; i < n; ++i) {
         const auto& item = m_items[i];
-        const LayoutStruct& ls = m_layoutStructs[i];
+        LayoutStruct& ls = m_layoutStructs[i];  // 使用引用以便修改
+
+        // 获取子项的对齐方式
+        const Qt::Alignment align = item->alignment();
+
+        // 对于单个子项且有布局方向对齐的情况，调整分配空间
+        // 使其对齐在整个可用空间内生效
+        if (n == 1) {
+            if (horiz && (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter))) {
+                // 水平对齐：将分配空间扩展到整个可用宽度
+                ls.pos = available.x();
+                ls.size = available.width();
+            } else if (!horiz && (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter))) {
+                // 垂直对齐：将分配空间扩展到整个可用高度
+                ls.pos = available.y();
+                ls.size = available.height();
+            }
+        }
+
+        // 获取子项的尺寸约束
+        const QSize hint = item->sizeHint();
+        const QSize minSize = item->minimumSize();
+        const QSize maxSize = item->maximumSize();
 
         QRect itemRect;
         if (horiz) {
-            itemRect = QRect(ls.pos, available.y(), ls.size, available.height());
+            // 水平布局
+            // 计算布局方向（水平）的尺寸
+            int itemWidth = ls.size;
+
+            // 如果设置了水平方向的对齐，使用 sizeHint 的宽度
+            if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter)) {
+                itemWidth = hint.width();
+            }
+
+            // 应用最小/最大尺寸约束
+            itemWidth = qBound(minSize.width(), itemWidth, maxSize.width() < SizeMax ? maxSize.width() : itemWidth);
+
+            // 计算非布局方向（垂直）的尺寸
+            int itemHeight = available.height();
+
+            // 如果设置了垂直方向的对齐，使用 sizeHint 的高度
+            if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter)) {
+                itemHeight = hint.height();
+            }
+
+            // 应用最小/最大尺寸约束
+            itemHeight = qMax(itemHeight, minSize.height());
+            if (maxSize.height() < SizeMax) {
+                itemHeight = qMin(itemHeight, maxSize.height());
+            }
+            itemHeight = qMin(itemHeight, available.height());
+
+            itemRect = QRect(ls.pos, available.y(), itemWidth, itemHeight);
         } else {
-            itemRect = QRect(available.x(), ls.pos, available.width(), ls.size);
+            // 垂直布局
+            // 计算布局方向（垂直）的尺寸
+            int itemHeight = ls.size;
+
+            // 如果设置了垂直方向的对齐，使用 sizeHint 的高度
+            if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter)) {
+                itemHeight = hint.height();
+            }
+
+            // 应用最小/最大尺寸约束
+            itemHeight = qBound(minSize.height(), itemHeight, maxSize.height() < SizeMax ? maxSize.height() : itemHeight);
+
+            // 计算非布局方向（水平）的尺寸
+            int itemWidth = available.width();
+
+            // 如果设置了水平方向的对齐，使用 sizeHint 的宽度
+            if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter)) {
+                itemWidth = hint.width();
+            }
+
+            // 应用最小/最大尺寸约束
+            itemWidth = qMax(itemWidth, minSize.width());
+            if (maxSize.width() < SizeMax) {
+                itemWidth = qMin(itemWidth, maxSize.width());
+            }
+            itemWidth = qMin(itemWidth, available.width());
+
+            itemRect = QRect(available.x(), ls.pos, itemWidth, itemHeight);
         }
 
-        // 处理对齐
-        const Qt::Alignment align = item->alignment();
+        // 处理对齐位置
         if (align != 0) {
-            const QSize hint = item->sizeHint();
-            if (horiz && available.height() > hint.height()) {
-                itemRect = alignedRect(
-                    QRect(itemRect.left(), available.y(), ls.size, available.height()),
-                    hint, align);
-            } else if (!horiz && available.width() > hint.width()) {
-                itemRect = alignedRect(
-                    QRect(available.x(), itemRect.top(), available.width(), ls.size),
-                    hint, align);
+            if (horiz) {
+                // 水平布局
+                // 处理垂直对齐（非布局方向）
+                if (available.height() > itemRect.height()) {
+                    itemRect = alignedRect(
+                        QRect(itemRect.left(), available.y(), itemRect.width(), available.height()),
+                        itemRect.size(), align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter));
+                }
+                // 处理水平对齐（布局方向）
+                // 对于有水平对齐的子项，在分配的空间内对齐
+                Qt::Alignment hAlign = align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter);
+                if (hAlign) {
+                    // 计算分配给此子项的空间范围
+                    // 从 ls.pos 开始，宽度为 ls.size
+                    QRect allocatedSpace(ls.pos, available.y(), ls.size, available.height());
+                    if (allocatedSpace.width() > itemRect.width()) {
+                        itemRect = alignedRect(allocatedSpace, itemRect.size(), hAlign);
+                    }
+                }
+            } else {
+                // 垂直布局
+                // 处理水平对齐（非布局方向）
+                if (available.width() > itemRect.width()) {
+                    itemRect = alignedRect(
+                        QRect(available.x(), itemRect.top(), available.width(), itemRect.height()),
+                        itemRect.size(), align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter));
+                }
+                // 处理垂直对齐（布局方向）
+                // 对于有垂直对齐的子项，在分配的空间内对齐
+                Qt::Alignment vAlign = align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter);
+                if (vAlign) {
+                    QRect allocatedSpace(available.x(), ls.pos, available.width(), ls.size);
+                    if (allocatedSpace.height() > itemRect.height()) {
+                        itemRect = alignedRect(allocatedSpace, itemRect.size(), vAlign);
+                    }
+                }
             }
         }
 
