@@ -9,13 +9,10 @@
  */
 
 #include "../global.h"
+#include "../boxlayout.h"
 #include <QWidget>
 #include <QColor>
 #include <vector>
-
-namespace VLayout {
-
-class BoxLayout;
 
 // ============================================================================
 // SandboxItem - 沙盒布局项数据
