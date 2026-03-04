@@ -2,12 +2,14 @@
 #include "timeline_components.h"
 #include "timeline_theme.h"
 #include "timeline_utils.h"
+#include "markdown_renderer.h"
 
 #include <QPainter>
 #include <QMouseEvent>
 #include <QApplication>
 #include <QClipboard>
 #include <QTimer>
+#include <QTextDocument>
 
 namespace Timeline {
 
@@ -101,18 +103,21 @@ QSize TimelineDelegate::sizeHint(const QStyleOptionViewItem& option,
     }
     case NodeType::ToolCall: {
         height = calculateToolCallHeight(index, width - Theme::totalHMargin);
+        height += Theme::contentVMargin * 2;  // 加上上下边距
         break;
     }
     case NodeType::ThinkingStep: {
         QStringList steps = index.data(ThinkingStepsRole).toStringList();
         bool expanded = index.data(IsExpandedRole).toBool();
-        height = calculateThinkingHeight(steps, expanded);
+        height = calculateThinkingHeight(steps, expanded, width - Theme::totalHMargin);
+        height += Theme::contentVMargin * 2;  // 加上上下边距
         break;
     }
     case NodeType::TaskList: {
         QVariantList tasks = index.data(TasksRole).toList();
         bool expanded = index.data(IsExpandedRole).toBool();
         height = calculateTaskListHeight(tasks, expanded);
+        height += Theme::contentVMargin * 2;  // 加上上下边距
         break;
     }
     }
@@ -159,6 +164,26 @@ bool TimelineDelegate::editorEvent(QEvent* event,
                 });
 
                 return true;
+            }
+        }
+
+        // 检测 Markdown 内容中的代码块复制按钮（AI/用户消息）
+        if (type == NodeType::AIMessage || type == NodeType::UserMessage) {
+            auto* contentComp = static_cast<MessageContentComponent*>(
+                component(QStringLiteral("content")));
+            if (contentComp) {
+                // 计算相对于组件的坐标
+                QRect compGeom = contentComp->geometry();
+                QPoint relPos(pos.x() - compGeom.x(), pos.y() - compGeom.y());
+
+                const MarkdownRenderer::CodeBlockInfo* codeBlock =
+                    contentComp->hitTestCopyButton(relPos);
+                if (codeBlock) {
+                    // 复制代码到剪贴板
+                    QApplication::clipboard()->setText(codeBlock->code);
+                    emit copyCodeRequested(index.data(NodeIdRole).toString(), codeBlock->code);
+                    return true;
+                }
             }
         }
     }
@@ -307,7 +332,7 @@ void TimelineDelegate::setupThinkingLayout(const QModelIndex& index) const
     bindTo("thinking")
         .property("steps", ThinkingStepsRole)
         .property("expanded", IsExpandedRole)
-        .property("isThinking", false);
+        .property("isThinking", ThinkingStateRole);
 }
 
 void TimelineDelegate::setupTaskListLayout(const QModelIndex& index) const
@@ -333,8 +358,15 @@ void TimelineDelegate::setupTaskListLayout(const QModelIndex& index) const
 int TimelineDelegate::calculateMessageHeight(const QString& content,
                                               int width) const
 {
-    QFont font(QStringLiteral("Segoe UI"), 10);
-    return Utils::calculateTextHeight(content, width, font);
+    MarkdownRenderer::Config config;
+    config.width = width;
+    config.textFont = Theme::textFont(10);
+    config.codeFont = Theme::codeFont(10);
+    config.codePadding = 8;  // 必须与 MessageContentComponent::paint 中的设置一致
+
+    // 注意：MessageContentComponent::paint 中更新 sizeHint 时会 +8
+    // 这里也需要 +8 以保持一致
+    return MarkdownRenderer::calculateHeight(content, config) + 8;
 }
 
 int TimelineDelegate::calculateCodeBlockHeight(const QString& code,
@@ -380,12 +412,34 @@ int TimelineDelegate::calculateToolCallHeight(const QModelIndex& index,
 }
 
 int TimelineDelegate::calculateThinkingHeight(const QStringList& steps,
-                                               bool expanded) const
+                                               bool expanded, int width) const
 {
     int height = 44;  // 头部高度
 
     if (expanded && !steps.isEmpty()) {
-        height += steps.size() * 20 + 16;
+        QFont stepFont = Theme::textFont(9);
+        QFontMetrics fm(stepFont);
+        int maxWidth = width - 48;  // 使用实际宽度
+
+        int y = 12;  // 头部后的起始位置
+        int stepNum = 1;
+
+        for (const QString& step : steps) {
+            // 计算步骤编号宽度
+            QString numText = QStringLiteral("%1. ").arg(stepNum++);
+            int numWidth = fm.horizontalAdvance(numText);
+
+            // 使用 QTextDocument 计算实际高度
+            QTextDocument doc;
+            doc.setDefaultFont(stepFont);
+            doc.setTextWidth(maxWidth - numWidth);
+            doc.setDocumentMargin(0);
+            doc.setPlainText(step);
+
+            y += doc.size().height() + 8;  // 文本高度 + 步骤间距
+        }
+
+        height = 32 + y + 8;  // 头部(32) + 内容 + 底部边距
     }
 
     return height;

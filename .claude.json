@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "qtcreator": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-proxy",
+        "http://localhost:3001/sse"
+      ]
+    }
+  }
+}

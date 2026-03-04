@@ -24,6 +24,9 @@ UI_DIR = $$VAYOUT_OBJ_BASE/timeline_demo/ui
 INCLUDEPATH += $$VAYOUT_INCLUDEPATH
 LIBS += -L$$VAYOUT_LIBPATH -lvlayout
 
+# 引入 AI SDK (CLI 适配器)
+include(../../src/aisdk/aisdk.pri)
+
 # Timeline 组件源文件
 SOURCES += \
     main.cpp \
@@ -31,7 +34,9 @@ SOURCES += \
     timeline_components.cpp \
     timeline_model.cpp \
     timeline_delegate.cpp \
-    timeline_widget.cpp
+    timeline_widget.cpp \
+    markdown_renderer.cpp \
+    code_highlighter.cpp
 
 HEADERS += \
     timeline_roles.h \
@@ -40,4 +45,6 @@ HEADERS += \
     timeline_components.h \
     timeline_model.h \
     timeline_delegate.h \
-    timeline_widget.h
+    timeline_widget.h \
+    markdown_renderer.h \
+    code_highlighter.h

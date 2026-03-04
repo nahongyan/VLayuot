@@ -53,7 +53,7 @@ void drawToolIcon(QPainter* painter, const QRect& area,
 
     // 绘制图标符号
     painter->setPen(Qt::white);
-    QFont font(QStringLiteral("Segoe UI"), s > 16 ? 10 : 8);
+    QFont font = Theme::textFont(s > 16 ? 10 : 8);
     font.setBold(true);
     painter->setFont(font);
 

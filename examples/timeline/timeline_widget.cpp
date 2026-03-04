@@ -45,22 +45,60 @@ void TimelineWidget::addAIMessage(const QString& content, bool streaming)
     scrollToBottom();
 }
 
+void TimelineWidget::updateAIMessage(const QString& content)
+{
+    m_model->updateLastAIMessage(content);
+    scrollToBottom();
+}
+
+void TimelineWidget::finalizeAIMessage(const QString& content)
+{
+    m_model->updateLastAIMessage(content, false);
+    scrollToBottom();
+}
+
 void TimelineWidget::addCodeBlock(const QString& language, const QString& code)
 {
     m_model->addCodeBlock(language, code);
     scrollToBottom();
 }
 
-void TimelineWidget::addToolCall(const QString& toolName, const QVariantMap& args)
+QString TimelineWidget::addToolCall(const QString& toolName, const QVariantMap& args)
 {
-    m_model->addToolCall(toolName, args);
+    QString nodeId = m_model->addToolCall(toolName, args);
     scrollToBottom();
+    return nodeId;
+}
+
+void TimelineWidget::updateToolResult(const QString& nodeId, const QString& result)
+{
+    m_model->setToolResult(nodeId, QVariantMap{{QStringLiteral("content"), result}});
+    m_model->updateToolStatus(nodeId, ToolStatus::Success);
 }
 
 void TimelineWidget::addThinking(const QStringList& steps)
 {
     m_model->addThinking(steps);
     scrollToBottom();
+}
+
+QString TimelineWidget::startThinking()
+{
+    QString nodeId = m_model->addThinking(QStringList());
+    m_model->setThinkingState(nodeId, true);
+    scrollToBottom();
+    return nodeId;
+}
+
+void TimelineWidget::updateThinking(const QString& nodeId, const QString& content)
+{
+    m_model->updateThinkingContent(nodeId, content);
+    scrollToBottom();
+}
+
+void TimelineWidget::finalizeThinking(const QString& nodeId)
+{
+    m_model->setThinkingState(nodeId, false);
 }
 
 void TimelineWidget::addTaskList(const std::vector<TaskItem>& tasks)

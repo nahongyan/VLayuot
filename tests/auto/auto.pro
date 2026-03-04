@@ -22,7 +22,8 @@ RCC_DIR = $$VAYOUT_OBJ_BASE/tst_auto/rcc
 UI_DIR = $$VAYOUT_OBJ_BASE/tst_auto/ui
 
 SOURCES += \
-    tst_delegate.cpp
+    tst_delegate.cpp \
+    tst_boxlayout.cpp
 
 # 链接 vlayout 库
 INCLUDEPATH += $$VAYOUT_INCLUDEPATH

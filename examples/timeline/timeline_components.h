@@ -10,8 +10,10 @@
 
 #include "vlayout/framework.h"
 #include "timeline_roles.h"
+#include "markdown_renderer.h"
 
 #include <QColor>
+#include <QVector>
 
 namespace Timeline {
 
@@ -64,6 +66,8 @@ private:
  * - 纯文本显示，自动换行
  * - 支持流式输出指示器
  * - 扁平化设计，无背景
+ * - Markdown 渲染支持
+ * - 代码块复制按钮
  */
 class MessageContentComponent : public VLayout::AbstractComponent
 {
@@ -74,8 +78,16 @@ public:
     QSize sizeHint() const override;
     void paint(VLayout::ComponentContext& ctx) override;
 
+    /**
+     * @brief 检测点击位置是否在复制按钮上
+     * @param pos 相对于组件的坐标
+     * @return 如果在复制按钮上，返回对应的代码块信息；否则返回 nullptr
+     */
+    const MarkdownRenderer::CodeBlockInfo* hitTestCopyButton(const QPoint& pos) const;
+
 private:
     QSize m_sizeHint;
+    QVector<MarkdownRenderer::CodeBlockInfo> m_codeBlocks;  ///< 渲染时的代码块信息
 };
 
 /**

@@ -1,0 +1,20 @@
+{
+  "model": "ollama:qwen3.5:27b",
+  "provider": "ollama",
+  "mcpServers": {
+    "filesystem": {
+      "command": "mcp-server-filesystem",
+      "args": ["--root", "."],
+      "disabled": false
+    },
+    "memory": {
+      "command": "mcp-server-memory",
+      "disabled": false
+    }
+  },
+  "options": {
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "stream": true
+  }
+}

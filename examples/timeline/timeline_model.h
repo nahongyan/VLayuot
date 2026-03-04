@@ -64,6 +64,7 @@ struct TimelineNode
 
     // 思考过程专用
     QStringList thinkingSteps;          ///< 思考步骤列表
+    bool isThinking = false;            ///< 是否正在思考（动画状态）
 
     // 任务列表专用
     std::vector<TaskItem> tasks;        ///< 任务列表
@@ -119,6 +120,13 @@ public:
      * @return 节点 ID
      */
     QString addAIMessage(const QString& content, bool streaming = false);
+
+    /**
+     * @brief 更新最后一条 AI 消息
+     * @param content 消息内容
+     * @param streaming 是否继续流式输出
+     */
+    void updateLastAIMessage(const QString& content, bool streaming = true);
 
     /**
      * @brief 更新流式输出文本
@@ -182,6 +190,20 @@ public:
      * @param step 步骤内容
      */
     void addThinkingStep(const QString& nodeId, const QString& step);
+
+    /**
+     * @brief 更新思考内容（流式更新）
+     * @param nodeId 节点 ID
+     * @param content 完整的思考内容
+     */
+    void updateThinkingContent(const QString& nodeId, const QString& content);
+
+    /**
+     * @brief 设置思考节点的 isThinking 状态
+     * @param nodeId 节点 ID
+     * @param thinking 是否正在思考
+     */
+    void setThinkingState(const QString& nodeId, bool thinking);
 
     // ========== 任务列表管理 ==========
 

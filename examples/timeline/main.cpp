@@ -1,25 +1,21 @@
 /**
  * @file main.cpp
- * @brief AI 编程助手时间轴组件演示
+ * @brief Timeline 组件演示（带 AI 支持）
  *
- * 展示时间轴组件的基本用法，包括：
- * - 用户消息和 AI 消息显示
- * - 代码块展示
- * - 工具调用卡片
- * - 思考过程折叠面板
- * - 任务列表
+ * 使用 Ollama API 进行本地大模型对话。
  */
 
 #include "timeline_widget.h"
+#include "adapters/adapter.h"
+#include "adapters/ollama_adapter.h"
 
 #include <QApplication>
 #include <QMainWindow>
 #include <QTimer>
+#include <QDebug>
 
 /**
  * @brief 主窗口类
- *
- * 包装 TimelineWidget 为独立窗口进行演示。
  */
 class MainWindow : public QMainWindow
 {
@@ -34,12 +30,11 @@ public:
         setCentralWidget(m_timeline);
 
         // 设置窗口属性
-        setWindowTitle(tr("AI Assistant Timeline Demo"));
-        resize(800, 600);
+        setWindowTitle(tr("Timeline Demo (Ollama)"));
+        resize(900, 700);
 
-        // 连接信号
-        connect(m_timeline, &Timeline::TimelineWidget::messageSent,
-                this, &MainWindow::onMessageSent);
+        // 初始化适配器
+        setupAdapter();
 
         // 加载示例数据
         QTimer::singleShot(500, this, [this]() {
@@ -47,52 +42,90 @@ public:
         });
     }
 
-private slots:
-    void onMessageSent(const QString& content)
+private:
+    void setupAdapter()
     {
-        // 模拟 AI 回复
-        QTimer::singleShot(1000, this, [this, content]() {
-            // 简单的回复逻辑
-            QString reply;
+        // 创建 Ollama 适配器
+        m_adapter = new AISDK::OllamaAdapter(this);
 
-            if (content.contains(QStringLiteral("排序")) ||
-                content.contains(QStringLiteral("sort"))) {
-                reply = tr("好的，我可以帮你实现排序算法。请问你需要哪种排序？"
-                          "快速排序、归并排序还是冒泡排序？");
-            } else if (content.contains(QStringLiteral("代码")) ||
-                       content.contains(QStringLiteral("code"))) {
-                reply = tr("我理解你需要代码相关的帮助。请告诉我具体需求，"
-                          "我会为你生成相应的代码。");
-            } else if (content.contains(QStringLiteral("帮助")) ||
-                       content.contains(QStringLiteral("help"))) {
-                reply = tr("我是一个 AI 编程助手，可以帮你：\n"
-                          "• 编写和修改代码\n"
-                          "• 解释代码逻辑\n"
-                          "• 调试和修复 Bug\n"
-                          "• 代码重构和优化\n"
-                          "请告诉我你需要什么帮助！");
+        // 配置
+        AISDK::AdapterConfig config;
+        config.model = QStringLiteral("qwen3.5:27b");  // 使用 qwen3.5:27b 模型
+        config.apiUrl = QStringLiteral("http://localhost:11434");
+
+        // 连接信号
+        connect(m_adapter, &AISDK::OllamaAdapter::readyChanged, this, [this](bool ready) {
+            qDebug() << "[MainWindow] Adapter ready:" << ready;
+            if (ready) {
+                m_timeline->addAIMessage(QStringLiteral("✅ AI 服务已就绪 (Ollama + qwen3.5:27b)"), false);
             } else {
-                reply = tr("收到你的消息：\"%1\"\n我正在思考如何帮助你...").arg(content);
+                m_timeline->addAIMessage(QStringLiteral("⚠️ 请确保 Ollama 服务正在运行: ollama serve"), false);
             }
-
-            m_timeline->addAIMessage(reply);
         });
+
+        connect(m_adapter, &AISDK::OllamaAdapter::thinkingReceived, this, [this](const QString& thinking) {
+            qDebug() << "[MainWindow] Thinking:" << thinking.left(30);
+            if (m_thinkingId.isEmpty()) {
+                m_thinkingId = m_timeline->startThinking();
+            }
+            m_timeline->updateThinking(m_thinkingId, thinking);
+        });
+
+        connect(m_adapter, &AISDK::OllamaAdapter::partialTextReceived, this, [this](const QString& text) {
+            // 第一次收到内容时添加 AI 消息节点
+            if (!m_aiMessageAdded) {
+                m_timeline->addAIMessage(QString(), true);
+                m_aiMessageAdded = true;
+            }
+            qDebug() << "[MainWindow] Partial:" << text.left(50);
+            m_timeline->updateAIMessage(text);
+        });
+
+        connect(m_adapter, &AISDK::OllamaAdapter::fullResponseReceived, this, [this](const QString& text) {
+            qDebug() << "[MainWindow] Full response:" << text.length() << "chars";
+            m_timeline->finalizeAIMessage(text);
+        });
+
+        connect(m_adapter, &AISDK::OllamaAdapter::errorOccurred, this, [this](const QString& error) {
+            m_timeline->finalizeAIMessage(QStringLiteral("❌ 错误: %1").arg(error));
+        });
+
+        // 连接用户消息
+        connect(m_timeline, &Timeline::TimelineWidget::messageSent, this, [this](const QString& content) {
+            qDebug() << "[MainWindow] User:" << content;
+
+            m_thinkingId.clear();
+            m_aiMessageAdded = false;
+
+            if (m_adapter->isReady()) {
+                m_adapter->chat(content);
+            } else {
+                m_timeline->addAIMessage(QStringLiteral("⚠️ AI 服务未就绪"), false);
+            }
+        });
+
+        // 初始化适配器
+        m_adapter->initialize(config);
     }
 
 private:
     Timeline::TimelineWidget* m_timeline = nullptr;
+    AISDK::OllamaAdapter* m_adapter = nullptr;
+    QString m_thinkingId;
+    bool m_aiMessageAdded = false;
 };
 
 int main(int argc, char* argv[])
 {
-    QApplication app(argc, argv);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
 
-    // 设置应用程序属性
+    QApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("Timeline Demo"));
     app.setApplicationVersion(QStringLiteral("1.0.0"));
-    app.setOrganizationName(QStringLiteral("VLayout"));
 
-    // 创建并显示主窗口
     MainWindow window;
     window.show();
 

@@ -81,19 +81,58 @@ public:
     void addAIMessage(const QString& content, bool streaming = false);
 
     /**
+     * @brief 更新 AI 消息（流式更新）
+     */
+    void updateAIMessage(const QString& content);
+
+    /**
+     * @brief 完成 AI 消息
+     */
+    void finalizeAIMessage(const QString& content);
+
+    /**
      * @brief 添加代码块
      */
     void addCodeBlock(const QString& language, const QString& code);
 
     /**
      * @brief 添加工具调用
+     * @param toolName 工具名称
+     * @param args 工具参数
+     * @return 工具节点 ID
      */
-    void addToolCall(const QString& toolName, const QVariantMap& args);
+    QString addToolCall(const QString& toolName, const QVariantMap& args);
+
+    /**
+     * @brief 更新工具执行结果
+     * @param nodeId 工具节点 ID
+     * @param result 执行结果
+     */
+    void updateToolResult(const QString& nodeId, const QString& result);
 
     /**
      * @brief 添加思考过程
      */
     void addThinking(const QStringList& steps);
+
+    /**
+     * @brief 开始思考过程（流式）
+     * @return 思考节点 ID
+     */
+    QString startThinking();
+
+    /**
+     * @brief 更新思考内容（流式）
+     * @param nodeId 思考节点 ID
+     * @param content 思考内容
+     */
+    void updateThinking(const QString& nodeId, const QString& content);
+
+    /**
+     * @brief 完成思考过程
+     * @param nodeId 思考节点 ID
+     */
+    void finalizeThinking(const QString& nodeId);
 
     /**
      * @brief 添加任务列表

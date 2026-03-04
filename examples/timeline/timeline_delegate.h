@@ -97,7 +97,7 @@ private:
     int calculateMessageHeight(const QString& content, int width) const;
     int calculateCodeBlockHeight(const QString& code, int width) const;
     int calculateToolCallHeight(const QModelIndex& index, int width) const;
-    int calculateThinkingHeight(const QStringList& steps, bool expanded) const;
+    int calculateThinkingHeight(const QStringList& steps, bool expanded, int width) const;
     int calculateTaskListHeight(const QVariantList& tasks, bool expanded) const;
 
     // 交互区域检测

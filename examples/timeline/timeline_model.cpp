@@ -68,6 +68,8 @@ QVariant TimelineModel::data(const QModelIndex& index, int role) const
     // 思考过程专用
     case ThinkingStepsRole:
         return node.thinkingSteps;
+    case ThinkingStateRole:
+        return node.isThinking;
 
     // 任务列表专用
     case TasksRole: {
@@ -131,6 +133,16 @@ bool TimelineModel::setData(const QModelIndex& index, const QVariant& value, int
         emit dataChanged(index, index, {ToolResultRole});
         return true;
 
+    case ThinkingStepsRole:
+        node.thinkingSteps = value.toStringList();
+        emit dataChanged(index, index, {ThinkingStepsRole});
+        return true;
+
+    case ThinkingStateRole:
+        node.isThinking = value.toBool();
+        emit dataChanged(index, index, {ThinkingStateRole});
+        return true;
+
     default:
         return false;
     }
@@ -185,6 +197,24 @@ QString TimelineModel::addAIMessage(const QString& content, bool streaming)
     endInsertRows();
 
     return node.id;
+}
+
+void TimelineModel::updateLastAIMessage(const QString& content, bool streaming)
+{
+    // 从后向前查找最后一条 AI 消息
+    for (int i = static_cast<int>(m_nodes.size()) - 1; i >= 0; --i) {
+        if (m_nodes[i].type == NodeType::AIMessage) {
+            m_nodes[i].content = content;
+            m_nodes[i].isStreaming = streaming;
+
+            QModelIndex idx = index(i, 0);
+            emit dataChanged(idx, idx, {ContentRole, IsStreamingRole});
+            return;
+        }
+    }
+
+    // 如果没有找到 AI 消息，创建一条新的
+    addAIMessage(content, streaming);
 }
 
 void TimelineModel::appendStreamingText(const QString& nodeId, const QString& chunk)
@@ -297,6 +327,34 @@ void TimelineModel::addThinkingStep(const QString& nodeId, const QString& step)
     node.thinkingSteps.append(step);
 
     emit dataChanged(idx, idx, {ThinkingStepsRole});
+}
+
+void TimelineModel::updateThinkingContent(const QString& nodeId, const QString& content)
+{
+    QModelIndex idx = indexForNodeId(nodeId);
+    if (!idx.isValid()) return;
+
+    TimelineNode& node = m_nodes[idx.row()];
+    // 将思考内容作为单个步骤存储
+    if (node.thinkingSteps.isEmpty()) {
+        node.thinkingSteps.append(content);
+    } else {
+        node.thinkingSteps[0] = content;
+    }
+
+    // 发出数据变化信号，包含 SizeHintRole 以触发视图重新计算高度
+    emit dataChanged(idx, idx, {ThinkingStepsRole, Qt::SizeHintRole});
+}
+
+void TimelineModel::setThinkingState(const QString& nodeId, bool thinking)
+{
+    QModelIndex idx = indexForNodeId(nodeId);
+    if (!idx.isValid()) return;
+
+    TimelineNode& node = m_nodes[idx.row()];
+    node.isThinking = thinking;
+
+    emit dataChanged(idx, idx, {ThinkingStateRole});
 }
 
 // ============================================================================

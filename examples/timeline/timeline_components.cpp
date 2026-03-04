@@ -1,11 +1,15 @@
 #include "timeline_components.h"
 #include "timeline_theme.h"
 #include "timeline_utils.h"
+#include "markdown_renderer.h"
+#include "code_highlighter.h"
 
 #include <QFontMetrics>
 #include <QApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QTextDocument>
+#include <QAbstractTextDocumentLayout>
 
 namespace Timeline {
 
@@ -46,7 +50,7 @@ void TimelineIndicatorComponent::paint(VLayout::ComponentContext& ctx)
 }
 
 // ============================================================================
-// MessageContentComponent - 消息内容 (扁平化)
+// MessageContentComponent - 消息内容 (Markdown 渲染)
 // ============================================================================
 
 MessageContentComponent::MessageContentComponent(const QString& id)
@@ -68,20 +72,25 @@ void MessageContentComponent::paint(VLayout::ComponentContext& ctx)
     QRect r = geometry();
     ctx.painter->save();
 
-    // 文本绘制 (无背景)
-    QFont font(QStringLiteral("Segoe UI"), 10);
-    ctx.painter->setFont(font);
-    ctx.painter->setPen(Theme::textPrimary);
+    // 配置 Markdown 渲染器
+    MarkdownRenderer::Config config;
+    config.width = r.width();
+    config.textColor = Theme::textPrimary;
+    config.codeBackground = Theme::bgCodeBlock;
+    config.codeBorderColor = Theme::codeBorder;
+    config.textFont = Theme::textFont(10);
+    config.codeFont = Theme::codeFont(10);
+    config.codePadding = 8;
+    config.codeBorderRadius = Theme::borderRadius;
 
-    QRect textRect = r.adjusted(0, 0, 0, 0);
-    ctx.painter->drawText(textRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, content);
+    // 使用 Markdown 渲染器绘制内容，并获取代码块信息
+    m_codeBlocks.clear();
+    MarkdownRenderer::render(ctx.painter, r, content, config, &m_codeBlocks);
 
     // 流式输出指示器
     if (isStreaming) {
-        int textHeight = ctx.painter->fontMetrics().boundingRect(
-            textRect, Qt::TextWordWrap, content).height();
-
-        QRect indicatorRect(textRect.x(), textRect.y() + textHeight + 4, 6, 6);
+        int contentHeight = MarkdownRenderer::calculateHeight(content, config);
+        QRect indicatorRect(r.x(), r.y() + contentHeight + 4, 6, 6);
         ctx.painter->setBrush(Theme::accentAI);
         ctx.painter->setPen(Qt::NoPen);
         ctx.painter->setRenderHint(QPainter::Antialiasing);
@@ -91,8 +100,21 @@ void MessageContentComponent::paint(VLayout::ComponentContext& ctx)
     ctx.painter->restore();
 
     // 更新 sizeHint
-    int height = Utils::calculateTextHeight(content, r.width(), font) + 8;
+    int height = MarkdownRenderer::calculateHeight(content, config) + 8;
+    if (isStreaming) {
+        height += 10;  // 流式指示器空间
+    }
     m_sizeHint.setHeight(qMax(24, height));
+}
+
+const MarkdownRenderer::CodeBlockInfo* MessageContentComponent::hitTestCopyButton(const QPoint& pos) const
+{
+    for (const auto& codeBlock : m_codeBlocks) {
+        if (codeBlock.copyButtonRect.contains(pos)) {
+            return &codeBlock;
+        }
+    }
+    return nullptr;
 }
 
 // ============================================================================
@@ -132,7 +154,7 @@ void CodeBlockComponent::paint(VLayout::ComponentContext& ctx)
     ctx.painter->drawLine(headerRect.bottomLeft(), headerRect.bottomRight());
 
     // 语言标签
-    QFont langFont(QStringLiteral("Segoe UI"), 9);
+    QFont langFont = Theme::textFont(9);
     ctx.painter->setFont(langFont);
     ctx.painter->setPen(Theme::textSecond);
     QRect langRect(headerRect.x() + 12, headerRect.y(), 100, headerRect.height());
@@ -142,21 +164,12 @@ void CodeBlockComponent::paint(VLayout::ComponentContext& ctx)
     QRect copyBtnRect(r.right() - 36, headerRect.y() + 4, 20, 20);
     Utils::drawCopyButton(ctx.painter, copyBtnRect, copyHovered, copied);
 
-    // 代码区域
+    // 代码区域（使用语法高亮）
     QRect codeRect(r.x() + 12, headerRect.bottom() + 8, r.width() - 24, r.height() - 44);
     QFont codeFont(QStringLiteral("Consolas"), 10);
-    ctx.painter->setFont(codeFont);
-    ctx.painter->setPen(Theme::textCode);
 
-    QStringList lines = code.split(QLatin1Char('\n'));
-    int y = codeRect.y() + ctx.painter->fontMetrics().ascent();
-    for (const QString& line : lines) {
-        if (y > codeRect.bottom()) break;
-        QString elidedLine = ctx.painter->fontMetrics().elidedText(
-            line, Qt::ElideRight, codeRect.width());
-        ctx.painter->drawText(codeRect.x(), y, elidedLine);
-        y += ctx.painter->fontMetrics().height();
-    }
+    // 使用语法高亮绘制代码
+    CodeHighlighter::drawCode(ctx.painter, codeRect, code, language, codeFont);
 
     ctx.painter->restore();
 }
@@ -202,7 +215,7 @@ void ToolCardComponent::paint(VLayout::ComponentContext& ctx)
     Utils::drawToolIcon(ctx.painter, iconRect, toolName, status);
 
     // 工具名称
-    QFont nameFont(QStringLiteral("Segoe UI"), 10);
+    QFont nameFont = Theme::textFont(10);
     nameFont.setBold(true);
     ctx.painter->setFont(nameFont);
     ctx.painter->setPen(Theme::textPrimary);
@@ -300,13 +313,13 @@ void ThinkingComponent::paint(VLayout::ComponentContext& ctx)
     ctx.painter->drawEllipse(iconRect);
 
     ctx.painter->setPen(QColor(30, 30, 30));
-    QFont iconFont(QStringLiteral("Segoe UI"), 9, QFont::Bold);
+    QFont iconFont = Theme::textFont(9);
     ctx.painter->setFont(iconFont);
     ctx.painter->drawText(iconRect, Qt::AlignCenter,
                       isThinking ? QStringLiteral("...") : QStringLiteral("T"));
 
     // 标题
-    QFont titleFont(QStringLiteral("Segoe UI"), 10);
+    QFont titleFont = Theme::textFont(10);
     ctx.painter->setFont(titleFont);
     ctx.painter->setPen(Theme::textPrimary);
     QString title = isThinking ? QStringLiteral("Thinking...")
@@ -319,24 +332,51 @@ void ThinkingComponent::paint(VLayout::ComponentContext& ctx)
     QRect arrowRect(headerRect.right() - 24, headerRect.y() + 6, 20, 20);
     Utils::drawExpandArrow(ctx.painter, arrowRect, expanded);
 
+    // 计算内容高度
+    int contentHeight = 32;  // 头部高度
+
     // 展开步骤
     if (expanded && !steps.isEmpty()) {
-        QFont stepFont(QStringLiteral("Segoe UI"), 9);
+        QFont stepFont = Theme::textFont(9);
         ctx.painter->setFont(stepFont);
         ctx.painter->setPen(Theme::textSecond);
 
         int y = headerRect.bottom() + 12;
+        int maxWidth = r.width() - 48;
         int stepNum = 1;
+
         for (const QString& step : steps) {
-            if (y > r.bottom() - 12) break;
-            QString stepText = QStringLiteral("%1. %2").arg(stepNum++).arg(step);
-            ctx.painter->drawText(r.x() + 24, y,
-                              Utils::truncateText(stepText, r.width() - 36));
-            y += 18;
+            // 绘制步骤编号
+            QString numText = QStringLiteral("%1. ").arg(stepNum++);
+            QFontMetrics fm(stepFont);
+            int numWidth = fm.horizontalAdvance(numText);
+            ctx.painter->drawText(r.x() + 24, y + fm.ascent(), numText);
+
+            // 使用 QTextDocument 进行自动换行（宽度要减去编号宽度）
+            QTextDocument doc;
+            doc.setDefaultFont(stepFont);
+            doc.setTextWidth(maxWidth - numWidth);
+            doc.setDocumentMargin(0);
+            doc.setPlainText(step);
+
+            // 绘制步骤内容（自动换行）
+            ctx.painter->save();
+            ctx.painter->translate(r.x() + 24 + numWidth, y);
+            QAbstractTextDocumentLayout::PaintContext paintCtx;
+            paintCtx.palette.setColor(QPalette::Text, Theme::textSecond);
+            doc.documentLayout()->draw(ctx.painter, paintCtx);
+            ctx.painter->restore();
+
+            int stepHeight = doc.size().height() + 8;  // 步骤间距
+            y += stepHeight;
+            contentHeight = y - r.y() + 8;  // 底部边距
         }
     }
 
     ctx.painter->restore();
+
+    // 更新 sizeHint
+    m_sizeHint.setHeight(qMax(40, contentHeight));
 }
 
 // ============================================================================
@@ -379,12 +419,12 @@ void TaskListComponent::paint(VLayout::ComponentContext& ctx)
     ctx.painter->setPen(Qt::NoPen);
     ctx.painter->drawRoundedRect(iconRect, 3, 3);
     ctx.painter->setPen(Qt::white);
-    QFont iconFont(QStringLiteral("Segoe UI"), 10);
+    QFont iconFont = Theme::textFont(10);
     ctx.painter->setFont(iconFont);
     ctx.painter->drawText(iconRect, Qt::AlignCenter, QStringLiteral("X"));
 
     // 标题和进度
-    QFont titleFont(QStringLiteral("Segoe UI"), 10);
+    QFont titleFont = Theme::textFont(10);
     titleFont.setBold(true);
     ctx.painter->setFont(titleFont);
     ctx.painter->setPen(Theme::textPrimary);
@@ -466,7 +506,7 @@ void TaskListComponent::drawTaskItem(VLayout::ComponentContext& ctx,
     // 任务文本
     ctx.painter->setPen(status == TaskStatus::Completed ? Theme::textSecond
                                                         : Theme::textPrimary);
-    QFont textFont(QStringLiteral("Segoe UI"), 9);
+    QFont textFont = Theme::textFont(9);
     ctx.painter->setFont(textFont);
     QString text = Utils::truncateText(task, r.width() - 50);
     ctx.painter->drawText(r.x() + 30, r.y() + 16, text);
@@ -494,7 +534,7 @@ void TaskListComponent::drawProgressBar(QPainter* painter,
 
     // 百分比文本
     painter->setPen(Theme::textPrimary);
-    QFont font(QStringLiteral("Segoe UI"), 8);
+    QFont font = Theme::textFont(8);
     painter->setFont(font);
     QString text = QStringLiteral("%1%").arg(progress);
     painter->drawText(rect, Qt::AlignCenter, text);
@@ -581,7 +621,7 @@ void StatusBadgeComponent::paint(VLayout::ComponentContext& ctx)
 
     // 文本
     ctx.painter->setPen(Qt::white);
-    QFont font(QStringLiteral("Segoe UI"), 8);
+    QFont font = Theme::textFont(8);
     ctx.painter->setFont(font);
     ctx.painter->drawText(r, Qt::AlignCenter, text);
 

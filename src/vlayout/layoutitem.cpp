@@ -27,7 +27,7 @@ QSize LayoutItem::maximumSize() const
 
 Qt::Orientations LayoutItem::expandingDirections() const
 {
-    return {};
+    return Qt::Orientations();
 }
 
 void LayoutItem::setGeometry(const QRect& rect)

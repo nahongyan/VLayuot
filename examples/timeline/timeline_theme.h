@@ -9,6 +9,8 @@
  */
 
 #include <QColor>
+#include <QFont>
+#include <QFontDatabase>
 
 namespace Timeline {
 namespace Theme {
@@ -205,6 +207,35 @@ inline QColor getTimelineDotColor(int nodeType, const QString& toolName = QStrin
     default:
         return dotDefault;
     }
+}
+
+// ============================================================================
+// 字体设置 - 支持中文
+// ============================================================================
+
+/// 获取默认文本字体（支持中文）
+inline QFont textFont(int pointSize = 10) {
+    QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+    font.setPointSize(pointSize);
+    return font;
+}
+
+/// 获取代码字体
+inline QFont codeFont(int pointSize = 10) {
+    QFont font(QStringLiteral("Consolas"), pointSize);
+    if (!font.exactMatch()) {
+        font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+        font.setPointSize(pointSize);
+    }
+    return font;
+}
+
+/// 获取标题字体
+inline QFont titleFont(int pointSize = 10) {
+    QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+    font.setPointSize(pointSize);
+    font.setBold(true);
+    return font;
 }
 
 } // namespace Theme

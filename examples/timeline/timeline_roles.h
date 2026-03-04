@@ -79,6 +79,7 @@ enum Roles {
 
     // 思考过程专用
     ThinkingStepsRole,                     ///< 思考步骤列表 (QStringList)
+    ThinkingStateRole,                     ///< 是否正在思考 (bool)
 
     // 任务列表专用
     TasksRole,                             ///< 任务列表 (QVariantList)
