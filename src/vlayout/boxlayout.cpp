@@ -541,7 +541,15 @@ void BoxLayout::doLayout(const QRect& rect)
     const int n = static_cast<int>(m_items.size());
 
     // 计算可用区域（减去边距）
-    const QRect available = rect.adjusted(m_leftMargin, m_topMargin, -m_rightMargin, -m_bottomMargin);
+    // 当边距之和超过容器尺寸时，可用宽/高 clamp 到 0，等同于 Qt 的行为：
+    // 子项按照 space=0 处理，不会因负数传入 qBound 导致 max < min 断言失败。
+    QRect available = rect.adjusted(m_leftMargin, m_topMargin, -m_rightMargin, -m_bottomMargin);
+    if (available.width() < 0) {
+        available.setWidth(0);
+    }
+    if (available.height() < 0) {
+        available.setHeight(0);
+    }
 
     // 直接在 m_layoutStructs 上计算（避免 vector 拷贝）
     const int pos = horiz ? available.x() : available.y();
@@ -580,59 +588,79 @@ void BoxLayout::doLayout(const QRect& rect)
         if (horiz) {
             // 水平布局
             // 计算布局方向（水平）的尺寸
+            // calculateGeometry 已经在可用空间内做了最优分配，直接使用其结果。
+            // 若 space < totalMin（场景1），ls.size 可能 < minSize，这是有意行为，
+            // 不再用 qBound 重新强制，否则当 ls.size < minSize 时会导致 max < min 断言。
             int itemWidth = ls.size;
+            // 即使无对齐，也要尊重 maxSize 上限（Qt 行为）
+            if (maxSize.width() < SizeMax) {
+                itemWidth = qMin(itemWidth, maxSize.width());
+            }
 
-            // 如果设置了水平方向的对齐，使用 sizeHint 的宽度
+            // 如果设置了水平方向的对齐，改用 sizeHint 宽度，并在合法范围内 clamp
             if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter)) {
                 itemWidth = hint.width();
+                // 保证 max >= min 再调用 qBound
+                const int effMax = (maxSize.width() < SizeMax)
+                    ? qMax(maxSize.width(), minSize.width())
+                    : qMax(itemWidth, minSize.width());
+                itemWidth = qBound(minSize.width(), itemWidth, effMax);
             }
-
-            // 应用最小/最大尺寸约束
-            itemWidth = qBound(minSize.width(), itemWidth, maxSize.width() < SizeMax ? maxSize.width() : itemWidth);
 
             // 计算非布局方向（垂直）的尺寸
-            int itemHeight = available.height();
-
-            // 如果设置了垂直方向的对齐，使用 sizeHint 的高度
+            int itemHeight;
             if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter)) {
+                // 有垂直对齐：使用 sizeHint 高度，clamp 到 [min, max] 并不超过 available
                 itemHeight = hint.height();
+                itemHeight = qMax(itemHeight, minSize.height());
+                if (maxSize.height() < SizeMax) {
+                    itemHeight = qMin(itemHeight, maxSize.height());
+                }
+                itemHeight = qMin(itemHeight, available.height());
+            } else {
+                // 无垂直对齐：填满可用高度，但受 maxSize 上限约束
+                itemHeight = available.height();
+                if (maxSize.height() < SizeMax) {
+                    itemHeight = qMin(itemHeight, maxSize.height());
+                }
             }
-
-            // 应用最小/最大尺寸约束
-            itemHeight = qMax(itemHeight, minSize.height());
-            if (maxSize.height() < SizeMax) {
-                itemHeight = qMin(itemHeight, maxSize.height());
-            }
-            itemHeight = qMin(itemHeight, available.height());
 
             itemRect = QRect(ls.pos, available.y(), itemWidth, itemHeight);
         } else {
             // 垂直布局
-            // 计算布局方向（垂直）的尺寸
+            // 布局方向（垂直）：calculateGeometry 已做最优分配，直接使用
             int itemHeight = ls.size;
+            // 即使无对齐，也要尊重 maxSize 上限（Qt 行为）
+            if (maxSize.height() < SizeMax) {
+                itemHeight = qMin(itemHeight, maxSize.height());
+            }
 
-            // 如果设置了垂直方向的对齐，使用 sizeHint 的高度
+            // 如果设置了垂直方向的对齐，改用 sizeHint 高度，并在合法范围内 clamp
             if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter)) {
                 itemHeight = hint.height();
+                const int effMax = (maxSize.height() < SizeMax)
+                    ? qMax(maxSize.height(), minSize.height())
+                    : qMax(itemHeight, minSize.height());
+                itemHeight = qBound(minSize.height(), itemHeight, effMax);
             }
-
-            // 应用最小/最大尺寸约束
-            itemHeight = qBound(minSize.height(), itemHeight, maxSize.height() < SizeMax ? maxSize.height() : itemHeight);
 
             // 计算非布局方向（水平）的尺寸
-            int itemWidth = available.width();
-
-            // 如果设置了水平方向的对齐，使用 sizeHint 的宽度
+            int itemWidth;
             if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter)) {
+                // 有水平对齐：使用 sizeHint 宽度，clamp 到 [min, max] 并不超过 available
                 itemWidth = hint.width();
+                itemWidth = qMax(itemWidth, minSize.width());
+                if (maxSize.width() < SizeMax) {
+                    itemWidth = qMin(itemWidth, maxSize.width());
+                }
+                itemWidth = qMin(itemWidth, available.width());
+            } else {
+                // 无水平对齐：填满可用宽度，但受 maxSize 上限约束
+                itemWidth = available.width();
+                if (maxSize.width() < SizeMax) {
+                    itemWidth = qMin(itemWidth, maxSize.width());
+                }
             }
-
-            // 应用最小/最大尺寸约束
-            itemWidth = qMax(itemWidth, minSize.width());
-            if (maxSize.width() < SizeMax) {
-                itemWidth = qMin(itemWidth, maxSize.width());
-            }
-            itemWidth = qMin(itemWidth, available.width());
 
             itemRect = QRect(available.x(), ls.pos, itemWidth, itemHeight);
         }

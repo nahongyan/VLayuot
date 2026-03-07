@@ -132,9 +132,10 @@ void LayoutSandboxWidget::setupUi()
     auto* itemGroupLayout = new QVBoxLayout(itemGroup);
 
     m_itemTable = new QTableWidget;
-    m_itemTable->setColumnCount(6);
+    m_itemTable->setColumnCount(9);
     m_itemTable->setHorizontalHeaderLabels({
-        tr("ID"), tr("Type"), tr("SizeHint"), tr("Stretch"), tr("Min"), tr("Max")
+        tr("ID"), tr("Type"), tr("SizeHint"), tr("Stretch"), tr("Min"), tr("Max"),
+        tr("CrossHint"), tr("CrossMin"), tr("CrossMax")
     });
     m_itemTable->horizontalHeader()->setStretchLastSection(true);
     m_itemTable->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -176,10 +177,10 @@ void LayoutSandboxWidget::setupUi()
     auto* resultLayout = new QVBoxLayout(resultGroup);
 
     m_resultTable = new QTableWidget;
-    m_resultTable->setColumnCount(8);
+    m_resultTable->setColumnCount(9);
     m_resultTable->setHorizontalHeaderLabels({
         tr("ID"), tr("Hint"), tr("Min"), tr("Max"),
-        tr("Stretch"), tr("Pos"), tr("Size"), tr("状态")
+        tr("Stretch"), tr("Pos"), tr("Size"), tr("CrossSize"), tr("状态")
     });
     m_resultTable->horizontalHeader()->setStretchLastSection(true);
     m_resultTable->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -285,7 +286,7 @@ void LayoutSandboxWidget::setMargins(int uniform)
 
 // ========== 布局项管理 ==========
 
-void LayoutSandboxWidget::addFixedItem(const QString& id, int size)
+void LayoutSandboxWidget::addFixedItem(const QString& id, int size, int crossSize)
 {
     SandboxItem item;
     item.id = id;
@@ -293,6 +294,9 @@ void LayoutSandboxWidget::addFixedItem(const QString& id, int size)
     item.minSize = size;
     item.maxSize = size;
     item.stretch = 0;
+    item.crossSizeHint = crossSize;
+    item.crossMinSize = crossSize;
+    item.crossMaxSize = crossSize;
 
     m_items.push_back(item);
     addItemToTable(item);
@@ -300,7 +304,8 @@ void LayoutSandboxWidget::addFixedItem(const QString& id, int size)
 }
 
 void LayoutSandboxWidget::addStretchItem(const QString& id, int stretch,
-                                          int sizeHint, int minSize)
+                                          int sizeHint, int minSize,
+                                          int crossSizeHint, int crossMinSize)
 {
     SandboxItem item;
     item.id = id;
@@ -308,6 +313,10 @@ void LayoutSandboxWidget::addStretchItem(const QString& id, int stretch,
     item.minSize = minSize;
     item.maxSize = 1000000;
     item.stretch = stretch;
+    // 交叉方向
+    item.crossSizeHint = crossSizeHint;
+    item.crossMinSize = crossMinSize;
+    item.crossMaxSize = 1000000;
 
     m_items.push_back(item);
     addItemToTable(item);
@@ -331,7 +340,8 @@ void LayoutSandboxWidget::addSpacing(int spacing)
 
 void LayoutSandboxWidget::addCustomItem(const QString& id,
                                          int sizeHint, int minSize, int maxSize,
-                                         int stretch)
+                                         int stretch,
+                                         int crossSizeHint, int crossMinSize, int crossMaxSize)
 {
     SandboxItem item;
     item.id = id;
@@ -339,6 +349,9 @@ void LayoutSandboxWidget::addCustomItem(const QString& id,
     item.minSize = minSize;
     item.maxSize = maxSize;
     item.stretch = stretch;
+    item.crossSizeHint = crossSizeHint;
+    item.crossMinSize = crossMinSize;
+    item.crossMaxSize = crossMaxSize;
 
     m_items.push_back(item);
     addItemToTable(item);
@@ -598,6 +611,15 @@ void LayoutSandboxWidget::onItemTableCellChanged(int row, int column)
     case 3: sbItem.stretch = item->text().toInt(); break;
     case 4: sbItem.minSize = item->text().toInt(); break;
     case 5: sbItem.maxSize = item->text().toInt(); break;
+    case 6: // 交叉方向
+        if (item->text() == "auto" || item->text() == "0") {
+            sbItem.crossSizeHint = 0;
+        } else {
+            sbItem.crossSizeHint = item->text().toInt();
+        }
+        break;
+    case 7: sbItem.crossMinSize = item->text().toInt(); break;
+    case 8: sbItem.crossMaxSize = item->text().toInt(); break;
     }
 
     updatePreview();
@@ -646,6 +668,7 @@ void LayoutSandboxWidget::updateResultTable()
         setNumItem(4, item.stretch);
         setNumItem(5, item.pos);
         setNumItem(6, item.size);
+        setNumItem(7, item.crossSize);
 
         auto* statusItem = new QTableWidgetItem(itemStatus(item));
         statusItem->setFlags(statusItem->flags() & ~Qt::ItemIsEditable);
@@ -654,7 +677,7 @@ void LayoutSandboxWidget::updateResultTable()
         } else if (item.isCompressed) {
             statusItem->setForeground(QColor(255, 152, 0));
         }
-        m_resultTable->setItem(static_cast<int>(i), 7, statusItem);
+        m_resultTable->setItem(static_cast<int>(i), 8, statusItem);
     }
 
     m_resultTable->resizeColumnsToContents();
@@ -688,7 +711,13 @@ void LayoutSandboxWidget::addItemToTable(const SandboxItem& item)
     m_itemTable->setItem(row, 3, new QTableWidgetItem(QString::number(item.stretch)));
     m_itemTable->setItem(row, 4, new QTableWidgetItem(QString::number(item.minSize)));
     m_itemTable->setItem(row, 5, new QTableWidgetItem(
-        item.maxSize == 1000000 ? "9999" : QString::number(item.maxSize)));
+        item.maxSize == 1000000 ? "∞" : QString::number(item.maxSize)));
+    // 交叉方向
+    m_itemTable->setItem(row, 6, new QTableWidgetItem(
+        item.crossSizeHint == 0 ? "auto" : QString::number(item.crossSizeHint)));
+    m_itemTable->setItem(row, 7, new QTableWidgetItem(QString::number(item.crossMinSize)));
+    m_itemTable->setItem(row, 8, new QTableWidgetItem(
+        item.crossMaxSize == 1000000 ? "∞" : QString::number(item.crossMaxSize)));
 
     m_itemTable->blockSignals(false);
     m_itemTable->resizeColumnsToContents();

@@ -3,58 +3,49 @@
 
 /**
  * @file sandbox_preview.h
- * @brief 布局预览控件
+ * @brief 布局预览控件 (QGraphicsView 版本)
  *
- * 提供带网格背景和标尺的布局可视化预览区。
+ * 基于 QGraphicsView/Scene 的布局可视化预览区。
+ * 使用真实的 BoxLayout 进行布局计算，确保预览与实际布局行为一致。
  */
 
 #include "../global.h"
 #include "../boxlayout.h"
-#include <QWidget>
+#include "sandbox_item.h"
+#include <QGraphicsView>
 #include <QColor>
+#include <memory>
 #include <vector>
 
 namespace VLayout {
 
-// ============================================================================
-// SandboxItem - 沙盒布局项数据
-// ============================================================================
-
-/**
- * @struct SandboxItem
- * @brief 沙盒中单个布局项的数据
- */
-struct SandboxItem
-{
-    QString id;             ///< 项标识
-    int sizeHint = 0;       ///< 首选尺寸
-    int minSize = 0;        ///< 最小尺寸
-    int maxSize = 1000000;  ///< 最大尺寸
-    int stretch = 0;        ///< 拉伸因子
-    bool isSpacing = false; ///< 是否为间隔项
-
-    // 计算结果（由布局算法填充）
-    int pos = 0;            ///< 计算后的位置
-    int size = 0;           ///< 计算后的尺寸
-    bool isCompressed = false;  ///< 是否被压缩
-    bool isOverflow = false;    ///< 是否溢出（小于最小尺寸）
-};
+class SandboxScene;
 
 // ============================================================================
-// SandboxPreview - 布局预览控件
+// SandboxPreview - 布局预览控件 (QGraphicsView)
 // ============================================================================
 
 /**
  * @class SandboxPreview
- * @brief 带网格背景和标尺的布局预览控件
+ * @brief 基于 QGraphicsView 的布局预览控件
  *
- * 绘制布局的可视化预览，包括：
- * - 网格背景（每 10px 细格，每 50px 粗格）
- * - 顶部和左侧标尺
- * - 彩色布局矩形
- * - 尺寸标注
+ * 使用 QGraphicsView/Scene 架构提供：
+ * - 可拖动的容器
+ * - 不可拖动但可点击的布局项
+ * - 网格背景
+ * - 标尺
+ *
+ * 通过 layout() 方法获取底层 BoxLayout，可以直接操作布局：
+ * @code
+ * auto layout = preview->layout();
+ * layout->clear();
+ * layout->addItem(createLabel("name", "Name:"));
+ * layout->addItem(createStretch());
+ * layout->addItem(createButton("btn", "OK"));
+ * preview->computeLayout();
+ * @endcode
  */
-class VLAYOUT_EXPORT SandboxPreview : public QWidget
+class VLAYOUT_EXPORT SandboxPreview : public QGraphicsView
 {
     Q_OBJECT
 
@@ -62,33 +53,39 @@ public:
     explicit SandboxPreview(QWidget* parent = nullptr);
     ~SandboxPreview() override;
 
+    // ========== 布局访问（核心接口）==========
+
+    /// 获取底层布局（直接操作）
+    std::shared_ptr<BoxLayout> layout() const;
+
     // ========== 容器设置 ==========
 
     void setContainerSize(int width, int height);
-    QSize containerSize() const { return m_containerSize; }
+    QSize containerSize() const;
 
     void setMargins(int left, int top, int right, int bottom);
     void getMargins(int* left, int* top, int* right, int* bottom) const;
 
-    // ========== 布局设置 ==========
+    // ========== 布局设置（委托给 BoxLayout）==========
 
     void setSpacing(int spacing);
-    int spacing() const { return m_spacing; }
+    int spacing() const;
 
     void setDirection(BoxLayout::Direction direction);
-    BoxLayout::Direction direction() const { return m_direction; }
+    BoxLayout::Direction direction() const;
 
     // ========== 布局项管理 ==========
 
     void setItems(const std::vector<SandboxItem>& items);
-    const std::vector<SandboxItem>& items() const { return m_items; }
+    const std::vector<SandboxItem>& items() const;
 
     void clearItems();
+    void clearLayout();
 
     // ========== 选中项 ==========
 
     void setSelectedIndex(int index);
-    int selectedIndex() const { return m_selectedIndex; }
+    int selectedIndex() const;
 
     // ========== 布局计算 ==========
 
@@ -96,7 +93,11 @@ public:
 
     // ========== 诊断信息 ==========
 
-    QString diagnosticText() const { return m_diagnosticText; }
+    QString diagnosticText() const;
+
+    // ========== 场景访问 ==========
+
+    SandboxScene* sandboxScene() const;
 
 signals:
     void itemClicked(int index);
@@ -105,48 +106,15 @@ signals:
     void containerSizeChanged(int width, int height);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseDoubleClickEvent(QMouseEvent* event) override;
-    void leaveEvent(QEvent* event) override;
-    void contextMenuEvent(const QPoint& pos);
+    void drawForeground(QPainter* painter, const QRectF& rect) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
-    // ========== 绘制方法 ==========
+    void drawRuler(QPainter* painter, const QRectF& rect);
+    void updateViewTransform();
 
-    void drawGrid(QPainter& painter, const QRect& contentRect);
-    void drawRuler(QPainter& painter, const QRect& contentRect);
-    void drawLayoutItems(QPainter& painter, const QRect& contentRect);
-    void drawSingleItem(QPainter& painter, const QRect& itemRect,
-                        const SandboxItem& item, int index);
-
-    // ========== 辅助方法 ==========
-
-    QColor itemColor(const SandboxItem& item) const;
-    QRect mapToPreview(const QRect& layoutRect, const QRect& contentRect) const;
-    int itemAtPosition(const QPoint& pos) const;
-
-    // ========== 成员变量 ==========
-
-    QSize m_containerSize = QSize(400, 200);
-    int m_leftMargin = 8;
-    int m_topMargin = 8;
-    int m_rightMargin = 8;
-    int m_bottomMargin = 8;
-    int m_spacing = 8;
-    BoxLayout::Direction m_direction = BoxLayout::Direction::LeftToRight;
-
-    std::vector<SandboxItem> m_items;
-    int m_selectedIndex = -1;
-    int m_hoverIndex = -1;
-
-    QString m_diagnosticText;
-
-    // 显示比例
-    double m_scale = 1.0;
-    int m_rulerSize = 30;  // 标尺区域大小
+    SandboxScene* m_scene = nullptr;
+    int m_rulerSize = 30;
 };
 
 } // namespace VLayout

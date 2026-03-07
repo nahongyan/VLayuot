@@ -57,11 +57,12 @@ public:
     // ========== 布局项管理 ==========
 
     /// 添加固定尺寸项
-    void addFixedItem(const QString& id, int size);
+    void addFixedItem(const QString& id, int size, int crossSize = 0);
 
     /// 添加弹性项
     void addStretchItem(const QString& id, int stretch = 1,
-                        int sizeHint = 100, int minSize = 0);
+                        int sizeHint = 100, int minSize = 0,
+                        int crossSizeHint = 0, int crossMinSize = 0);
 
     /// 添加间隔
     void addSpacing(int spacing);
@@ -69,7 +70,8 @@ public:
     /// 添加自定义项
     void addCustomItem(const QString& id,
                        int sizeHint, int minSize, int maxSize,
-                       int stretch = 0);
+                       int stretch = 0,
+                       int crossSizeHint = 0, int crossMinSize = 0, int crossMaxSize = 1000000);
 
     /// 清空所有项
     void clearItems();

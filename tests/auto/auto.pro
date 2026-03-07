@@ -23,7 +23,8 @@ UI_DIR = $$VAYOUT_OBJ_BASE/tst_auto/ui
 
 SOURCES += \
     tst_delegate.cpp \
-    tst_boxlayout.cpp
+    tst_boxlayout.cpp \
+    tst_sandbox_preview.cpp
 
 # 链接 vlayout 库
 INCLUDEPATH += $$VAYOUT_INCLUDEPATH

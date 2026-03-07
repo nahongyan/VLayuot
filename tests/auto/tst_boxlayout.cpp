@@ -54,6 +54,9 @@ private slots:
     void T06_largeStretch();
     void T07_stretchWithFixedSize();
     void T08_stretchUpdatesOnItemChange();
+    void T09_stretchItemGetsRemainder();
+    void T10_stretchVerticalGetsRemainder();
+    void T11_stretchItemShrinkToMinInScenario2();
 
     // ========== C: 尺寸约束测试 ==========
     void C01_fixedSize();
@@ -176,8 +179,9 @@ void TestBoxLayout::B02_singleItem()
     layout->setGeometry(QRect(0, 0, 200, 50));
     layout->activate();
 
-    QVERIFY(item->finalRect().x() >= 0);
-    QVERIFY(item->finalRect().width() > 0);
+    // 单个无约束 item 应填满整个可用宽度
+    QCOMPARE(item->finalRect().x(), 0);
+    QCOMPARE(item->finalRect().width(), 200);
     QCOMPARE(item->finalRect().height(), 50);
 }
 
@@ -348,6 +352,8 @@ void TestBoxLayout::M04_largeMargins()
 
 void TestBoxLayout::M05_marginsExceedSpace()
 {
+    // 边距之和(200) > 容器尺寸(150)，可用空间为 0
+    // 不应崩溃，坐标/尺寸应为合法非负值
     auto layout = std::make_shared<HBoxLayout>();
     layout->setContentsMargins(100, 100, 100, 100);
     auto item = createWidget("item1", 100, 30);
@@ -356,8 +362,10 @@ void TestBoxLayout::M05_marginsExceedSpace()
     layout->setGeometry(QRect(0, 0, 150, 150));
     layout->activate();
 
-    QVERIFY(item->finalRect().x() >= 0);
-    QVERIFY(item->finalRect().y() >= 0);
+    // 不崩溃，item 的矩形合法（非负）
+    QVERIFY(item->finalRect().width() >= 0);
+    QVERIFY(item->finalRect().height() >= 0);
+    QVERIFY(layout->isValid());
 }
 
 void TestBoxLayout::M06_negativeMargins()
@@ -423,7 +431,8 @@ void TestBoxLayout::S02_positiveSpacing()
     layout->activate();
 
     QCOMPARE(item1->finalRect().x(), 0);
-    QVERIFY(item2->finalRect().x() > item1->finalRect().width());
+    // sizeHint 各50，间距8，空间=108：每项得50，item2从 50+8=58 开始
+    QCOMPARE(item2->finalRect().x(), 58);
 }
 
 void TestBoxLayout::S03_largeSpacing()
@@ -657,6 +666,85 @@ void TestBoxLayout::T08_stretchUpdatesOnItemChange()
     QCOMPARE(item2->finalRect().width(), 50);
 }
 
+void TestBoxLayout::T09_stretchItemGetsRemainder()
+{
+    // 核心场景：验证 Qt 兼容的 smartSizeHint 行为
+    //
+    // stretch > 0 的 item，其 smartSizeHint = minimumSize（而非 sizeHint）。
+    // 这使得它在场景3（额外空间）中：
+    //   - non-stretch item 优先满足其 sizeHint（deficit 保护）
+    //   - stretch item 获得剩余空间
+    //
+    // 布局：HBox，space=150，zeor spacing
+    //   - stretchItem(sizeHint=100, min=0, stretch=1)：smartSizeHint=0
+    //   - normalItem (sizeHint=100, min=0, stretch=0)：smartSizeHint=100
+    //   totalHint_new = 0+100 = 100 < 150 → 场景3
+    //   normalItem 因 deficit 保护得到 100，stretchItem 得到剩余 50
+    auto layout = std::make_shared<HBoxLayout>();
+    layout->setSpacing(0);
+    auto stretchItem = createWidget("stretch", 100, 30);
+    stretchItem->setStretch(1);
+    auto normalItem  = createWidget("normal",  100, 30);
+    layout->addItem(stretchItem);
+    layout->addItem(normalItem);
+
+    layout->setGeometry(QRect(0, 0, 150, 40));
+    layout->activate();
+
+    QCOMPARE(normalItem->finalRect().width(),  100); // 保持 sizeHint
+    QCOMPARE(stretchItem->finalRect().width(),  50); // 获得剩余空间
+    QCOMPARE(stretchItem->finalRect().x(),       0); // 先排
+    QCOMPARE(normalItem->finalRect().x(),       50); // 随后
+}
+
+void TestBoxLayout::T10_stretchVerticalGetsRemainder()
+{
+    // 与 T09 相同逻辑，验证垂直方向（VBoxLayout）同样适用
+    auto layout = std::make_shared<VBoxLayout>();
+    layout->setSpacing(0);
+    auto stretchItem = createWidget("stretch", 30, 100);
+    stretchItem->setStretch(1);
+    auto normalItem  = createWidget("normal",  30, 100);
+    layout->addItem(stretchItem);
+    layout->addItem(normalItem);
+
+    layout->setGeometry(QRect(0, 0, 30, 150));
+    layout->activate();
+
+    QCOMPARE(normalItem->finalRect().height(),  100); // 保持 sizeHint
+    QCOMPARE(stretchItem->finalRect().height(),  50); // 获得剩余空间
+    QCOMPARE(stretchItem->finalRect().y(),        0); // 先排
+    QCOMPARE(normalItem->finalRect().y(),        50); // 随后
+}
+
+void TestBoxLayout::T11_stretchItemShrinkToMinInScenario2()
+{
+    // 场景2（min <= space < hint）中的 stretch item 行为：
+    //   stretch item 的 smartSizeHint = minimumSize，在场景2预分配阶段
+    //   条件 (minimumSize >= smartSizeHint) → (0 >= 0) 成立，
+    //   因此 stretch item 被预设为 minimumSize（可能是0），
+    //   将全部收缩压力集中到 non-stretch item 上。
+    //
+    //   item1(sizeHint=100, min=50, stretch=0)：smartSizeHint=100
+    //   item2(sizeHint=100, min=0,  stretch=1)：smartSizeHint=0
+    //   totalHint=100, totalMin=50, space=80
+    //   80 ∈ [50, 100) → 场景2，overdraft=20
+    //   item2 预设为 0（smartSizeHint=0），item1 从 100 收缩 20 → 80
+    auto layout = std::make_shared<HBoxLayout>();
+    layout->setSpacing(0);
+    auto item1 = createWidget("item1", 100, 30, 50, 30, SizeMax, SizeMax);
+    auto item2 = createWidget("item2", 100, 30);
+    item2->setStretch(1);
+    layout->addItem(item1);
+    layout->addItem(item2);
+
+    layout->setGeometry(QRect(0, 0, 80, 40));
+    layout->activate();
+
+    QCOMPARE(item1->finalRect().width(), 80); // 收缩了20，但仍 >= min(50)
+    QCOMPARE(item2->finalRect().width(),  0); // stretch item 收缩到 minimumSize=0
+}
+
 // ============================================================================
 // C: 尺寸约束测试
 // ============================================================================
@@ -670,10 +758,10 @@ void TestBoxLayout::C01_fixedSize()
     layout->setGeometry(QRect(0, 0, 200, 50));
     layout->activate();
 
-    // 水平方向固定宽度生效
+    // 水平方向固定宽度生效（min=max=100）
     QCOMPARE(item->finalRect().width(), 100);
-    // 垂直方向在 HBoxLayout 中会填满可用高度（除非设置了 alignment）
-    QVERIFY(item->finalRect().height() > 0);
+    // 垂直方向 maxSize=30，被限制在30（不会填满可用高度50）
+    QCOMPARE(item->finalRect().height(), 30);
 }
 
 void TestBoxLayout::C02_minimumSize()
@@ -682,12 +770,17 @@ void TestBoxLayout::C02_minimumSize()
     auto item = createWidget("item1", 100, 30, 80, 20, SizeMax, SizeMax);
     layout->addItem(item);
 
+    // 布局协商：minimumSize 应上报 item 的最小宽度
+    QCOMPARE(layout->minimumSize().width(), 80);
+    QCOMPARE(layout->minimumSize().height(), 20);
+
+    // space(50) < totalMin(80) → 场景1：item 被压缩到 50，低于 minSize(80)
+    // 这与 Qt 行为一致：空间极度不足时 item 可以被压缩到小于 minimumSize
     layout->setGeometry(QRect(0, 0, 50, 10));
     layout->activate();
 
-    // 宽度约束生效，高度在 HBoxLayout 中会填满
-    QVERIFY(item->finalRect().width() >= 80);
-    QVERIFY(item->finalRect().height() > 0);
+    QCOMPARE(item->finalRect().width(),  50); // 填满可用空间（场景1分配结果）
+    QVERIFY(item->finalRect().height() > 0);  // 高度非负
 }
 
 void TestBoxLayout::C03_maximumSize()
@@ -699,9 +792,10 @@ void TestBoxLayout::C03_maximumSize()
     layout->setGeometry(QRect(0, 0, 200, 50));
     layout->activate();
 
-    // 宽度约束生效，高度在 HBoxLayout 中可能填满
-    QVERIFY(item->finalRect().width() <= 120);
-    QVERIFY(item->finalRect().height() > 0);
+    // 水平方向 maxSize=120 限制生效（空间=200 > max=120）
+    QCOMPARE(item->finalRect().width(), 120);
+    // 垂直方向 maxSize=40，被限制在40
+    QCOMPARE(item->finalRect().height(), 40);
 }
 
 void TestBoxLayout::C04_mixedConstraints()
@@ -760,10 +854,10 @@ void TestBoxLayout::C07_maxLessThanHint()
     layout->setGeometry(QRect(0, 0, 200, 50));
     layout->activate();
 
-    // 宽度最大约束生效
-    QVERIFY(item->finalRect().width() <= 50);
-    // 高度在 HBoxLayout 中会填满可用空间
-    QVERIFY(item->finalRect().height() > 0);
+    // 宽度最大约束生效（maxSize.width=50，空间充足时应精确等于50）
+    QCOMPARE(item->finalRect().width(), 50);
+    // 高度在 HBoxLayout 中无约束时填满可用高度（50），maxSize.height=20 限制
+    QCOMPARE(item->finalRect().height(), 20);
 }
 
 void TestBoxLayout::C08_zeroMinSize()
@@ -898,10 +992,10 @@ void TestBoxLayout::E07_spaceGreaterThanMax()
     layout->setGeometry(QRect(0, 0, 200, 50));
     layout->activate();
 
-    // 水平方向的最大约束生效
-    QVERIFY(item->finalRect().width() <= 150);
-    // 垂直方向在 HBoxLayout 中会填满可用空间（除非设置了 alignment）
-    QVERIFY(item->finalRect().height() > 0);
+    // 水平方向 maxSize.width=150 限制生效（空间=200 > max=150）
+    QCOMPARE(item->finalRect().width(), 150);
+    // 垂直方向 maxSize.height=40，被限制在40
+    QCOMPARE(item->finalRect().height(), 40);
 }
 
 void TestBoxLayout::E08_emptyItem()

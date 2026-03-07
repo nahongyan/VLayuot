@@ -55,9 +55,16 @@ CONFIG(debug, debug|release) {
 contains(DEFINES, VLAYOUT_DEBUGGER) {
     SOURCES += \
         vlayout/debugger/sandbox_preview.cpp \
-        vlayout/debugger/sandbox_widget.cpp
+        vlayout/debugger/sandbox_widget.cpp \
+        vlayout/debugger/sandbox_scene.cpp \
+        vlayout/debugger/container_graphics_item.cpp \
+        vlayout/debugger/layout_item_graphics.cpp
 
     HEADERS += \
+        vlayout/debugger/sandbox_item.h \
         vlayout/debugger/sandbox_preview.h \
-        vlayout/debugger/sandbox_widget.h
+        vlayout/debugger/sandbox_widget.h \
+        vlayout/debugger/sandbox_scene.h \
+        vlayout/debugger/container_graphics_item.h \
+        vlayout/debugger/layout_item_graphics.h
 }

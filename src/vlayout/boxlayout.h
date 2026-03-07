@@ -39,11 +39,17 @@ struct LayoutStruct
     bool done = false;      ///< 计算完成标志
 
     /**
-     * @brief 返回有效的首选尺寸（sizeHint 和 minimumSize 的较大值）
+     * @brief 返回有效的首选尺寸
+     *
+     * 与 Qt 的 QLayoutStruct::smartSizeHint() 行为完全一致：
+     * - stretch > 0 的子项：返回 minimumSize，使其在空间不足（场景2）时
+     *   不参与等比收缩，直接保留最小尺寸；多余空间才按 stretch 因子分配。
+     * - stretch == 0 的子项：返回 max(sizeHint, minimumSize)，即尊重最小尺寸。
+     *
      * @return 有效首选尺寸
      */
     int smartSizeHint() const {
-        return qMax(sizeHint, minimumSize);
+        return (stretch > 0) ? minimumSize : qMax(sizeHint, minimumSize);
     }
 
     /**
@@ -176,6 +182,23 @@ public:
     static QRect alignedRect(const QRect& available, const QSize& size, Qt::Alignment alignment);
 
     /**
+     * @brief 核心几何计算算法（公开接口，供调试器使用）
+     *
+     * 这是 Qt qlayoutengine.cpp 中 qGeomCalc 函数的直接移植，
+     * 使用相同的定点算术和分配逻辑。
+     *
+     * @param chain 布局结构数组
+     * @param start 起始索引
+     * @param count 子项数量
+     * @param pos 起始位置
+     * @param space 可用空间
+     * @param spacer 默认间距
+     */
+    static void calculateGeometry(std::vector<LayoutStruct>& chain,
+                                  int start, int count,
+                                  int pos, int space, int spacer);
+
+    /**
      * @brief 使布局失效
      *
      * 重写以同时重置脏标志。
@@ -212,23 +235,6 @@ private:
 
     /// 设置布局数据（计算 sizeHint、minSize、maxSize 等）
     void setupLayoutData() const;
-
-    /**
-     * @brief 核心几何计算算法
-     *
-     * 这是 Qt qlayoutengine.cpp 中 qGeomCalc 函数的直接移植，
-     * 使用相同的定点算术和分配逻辑。
-     *
-     * @param chain 布局结构数组
-     * @param start 起始索引
-     * @param count 子项数量
-     * @param pos 起始位置
-     * @param space 可用空间
-     * @param spacer 默认间距
-     */
-    static void calculateGeometry(std::vector<LayoutStruct>& chain,
-                                  int start, int count,
-                                  int pos, int space, int spacer);
 
     /// 判断是否为水平布局
     static bool isHorizontal(Direction dir) {
