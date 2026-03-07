@@ -1,4 +1,5 @@
 #include "recentprojectswindow.h"
+#include "vs_components.h"
 #include "vs_model.h"
 #include "vs_delegates.h"
 #include "vs_theme.h"

@@ -1,156 +1,133 @@
-# VLayout Framework
+# VLayout
 
-<p align="center">
-  <strong>声明式 Qt Delegate 框架</strong><br>
-  <em>Declarative Delegate Framework for Qt Model/View</em>
-</p>
+Declarative Delegate Framework for Qt
 
-<p align="center">
-  <a href="#特性">特性</a> •
-  <a href="#快速开始">快速开始</a> •
-  <a href="#核心概念">核心概念</a> •
-  <a href="#组件库">组件库</a> •
-  <a href="#示例">示例</a> •
-  <a href="#许可证">许可证</a>
-</p>
+> Build beautiful, data-driven list views with declarative API
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Qt-5.12+-green.svg" alt="Qt Version">
-  <img src="https://img.shields.io/badge/C++-11-blue.svg" alt="C++ Version">
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
-</p>
+[![Qt Version](https://img.shields.io/badge/Qt-5.12+-41CD52?style=flat-square)](https://www.qt.io)
+[![C++ Version](https://img.shields.io/badge/C++-11-00599C?style=flat-square)](https://isocpp.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square)](#features)
+
+[中文文档](README_CN.md) | **English**
 
 ---
 
-## 特性
+## Features
 
-- **声明式 API** - 在构造函数中声明式地描述 UI 布局和数据绑定
-- **组件化架构** - 可复用的 UI 组件，支持自定义扩展
-- **流式数据绑定** - 链式 API 将 Model 数据绑定到组件属性
-- **事件处理** - 声明式点击事件处理，无需手动实现 `editorEvent`
-- **布局引擎** - 支持 QBoxLayout 风格的水平/垂直布局，带缓存优化
-- **丰富的组件库** - 内置 20+ 常用组件（Label, Button, CheckBox, ProgressBar 等）
-- **零依赖** - 仅依赖 Qt Core 和 Qt Gui 模块
-- **高性能** - 布局结果缓存，快速路径优化
+- **Declarative API** - Describe UI layout and data binding in constructor
+- **Component-based** - 20+ built-in components, easy to extend
+- **Fluent Data Binding** - Chain API to bind Model data to component properties
+- **Powerful Layout Engine** - QBoxLayout-style H/V layouts with alignment support
+- **Layout Debugger** - Visual debugging tool for layout inspection
+- **High Performance** - Layout result caching, fast path optimization
+- **Zero Dependency** - Only requires Qt Core, Gui, and Widgets
 
----
+## Quick Start
 
-## 快速开始
+### Installation
 
-### 安装
+**Option 1: Build as Library (Recommended)**
 
-#### 方式一：作为库使用（推荐）
+```bash
+git clone https://github.com/yourusername/vlayout.git
+cd vlayout
+qmake VLayout.pro
+make
+```
 
-1. 构建整个项目：
-   ```bash
-   qmake VLayout.pro
-   make
-   ```
+**Option 2: Include Source**
 
-2. 输出目录结构：
-   ```
-   build/
-   ├── lib/           # 库文件 (vlayout.dll/.a)
-   ├── bin/           # 可执行文件 (示例、测试)
-   └── obj/           # 中间文件
-   ```
-
-3. 在你的项目中链接：
-   ```qmake
-   INCLUDEPATH += /path/to/VLayout/src
-   LIBS += -L/path/to/VLayout/build/lib -lvlayout
-   ```
-
-#### 方式二：直接包含源码
-
-将 `src/vlayout` 目录复制到你的项目中，并在 `.pro` 文件中添加：
+Copy `src/vlayout` to your project and add to `.pro`:
 
 ```qmake
 include(src/vlayout/vlayout.pri)
 ```
 
-### 最小示例
+### Minimal Example
 
 ```cpp
 #include <vlayout/framework.h>
 using namespace VLayout;
 
-// 自定义 Delegate
 class MyDelegate : public DelegateController
 {
 public:
     MyDelegate(QObject* parent = nullptr) : DelegateController(parent)
     {
-        // 添加组件
-        addItem<LabelComponent>("title", -1);  // 弹性填充
-        addItem<ButtonComponent>("btn", 60);    // 固定 60px
+        // 1. Define layout
+        addItem<LabelComponent>("title", -1);   // Stretch fill
+        addItem<ButtonComponent>("btn", 60);    // Fixed 60px
         addSpacing(8);
         setRowHeight(36);
 
-        // 数据绑定
+        // 2. Data binding
         bindTo("title")
             .text(Qt::DisplayRole)
-            .color(QColor(232, 232, 240));
+            .color(QColor(50, 50, 50));
 
-        // 事件处理
+        // 3. Event handling
         onClick("btn", [](const QModelIndex& idx, IComponent*) {
-            qDebug() << "Clicked:" << idx.data().toString();
+            qDebug() << "Clicked:" << idx.data();
         });
     }
 };
 ```
 
----
+## Core Concepts
 
-## 核心概念
+### Layout System
 
-### DelegateController
-
-`DelegateController` 是框架的核心类，继承自 `QStyledItemDelegate`。它提供声明式 API 来配置：
-
-- **组件管理** - `addComponent()`, `addItem<T>()`
-- **布局描述** - `setLayout()`, `setRow()`, `addItem()`, `addSpacing()`
-- **数据绑定** - `bindTo()`
-- **事件处理** - `onClick()`
-
-### 组件 (Component)
-
-组件是可绘制的 UI 元素，继承自 `IComponent` 接口。框架提供 `AbstractComponent` 基类，简化自定义组件的开发。
+VLayout provides a QBoxLayout-compatible layout engine:
 
 ```cpp
-class MyComponent : public AbstractComponent
-{
-public:
-    MyComponent(const QString& id) : AbstractComponent(id) {}
+// Basic row layout
+setMargins(16, 8, 16, 8);  // left, top, right, bottom
+setSpacing(12);             // item spacing
 
-    QString type() const override { return "MyComponent"; }
-
-    void paint(ComponentContext& ctx) override {
-        QPainter* p = ctx.painter;
-        QRect r = geometry();
-        p->drawText(r, Qt::AlignCenter, text());
-    }
-
-    void setText(const QString& t) { setProperty("text", t); }
-    QString text() const { return property("text").toString(); }
-};
+addItem<IconComponent>("icon", 32, Qt::AlignVCenter);  // Fixed 32px, vertically centered
+addItem<LabelComponent>("title", -1);                   // Stretch fill
+addItem<BadgeComponent>("count", 24);                   // Fixed 24px
+addSpacing(8);                                          // Spacer
 ```
 
-### 数据绑定
+### Alignment Behavior
 
-使用 `bindTo()` 创建从 Model 到组件的声明式绑定：
+| Alignment | Main Direction | Cross Direction |
+| --------- | -------------- | --------------- |
+| No alignment | Uses layout allocation | Fills container |
+| AlignVCenter (HBox) | Uses layout allocation | Uses sizeHint |
+| AlignHCenter (VBox) | Uses layout allocation | Uses sizeHint |
+| AlignCenter | Uses sizeHint | Uses sizeHint |
+
+```cpp
+// Icon: 32x32, vertically centered
+auto icon = std::make_shared<WidgetItem>("icon");
+icon->setSizeHint(QSize(32, 32));
+icon->setMinimumSize(QSize(32, 32));
+icon->setMaximumSize(QSize(32, 32));
+icon->setAlignment(Qt::AlignVCenter);
+
+// Text: width stretches, height 24, vertically centered
+auto text = std::make_shared<WidgetItem>("text");
+text->setSizeHint(QSize(100, 24));
+text->setMinimumSize(QSize(50, 24));
+text->setStretch(1);
+text->setAlignment(Qt::AlignVCenter);
+```
+
+### Data Binding
 
 ```cpp
 bindTo("icon")
-    .property("iconType", IconTypeRole)
-    .property("name", NameRole);
+    .property("iconType", IconTypeRole);
 
 bindTo("title")
     .text(Qt::DisplayRole)
     .boldFont(12)
-    .color(255, 255, 255);
+    .color(QColor(33, 33, 33));
 
-bindTo("badge")
+bindTo("status")
     .text(StatusRole, [](const QVariant& v) {
         return statusText(v.toInt());
     })
@@ -159,243 +136,217 @@ bindTo("badge")
     })
     .visibleWhenNotEmpty(StatusRole);
 
-bindTo("pin")
-    .checkedWhenTrue(PinnedRole)
+bindTo("checkbox")
+    .checkedWhenTrue(CheckedRole)
     .onClick([](const QModelIndex& idx, IComponent*) {
-        toggleData(idx, PinnedRole);
+        toggleData(idx, CheckedRole);
     });
 ```
 
-### 布局系统
+## Components
 
-#### 极简行布局 API
+### Built-in Components
 
-类似 `QBoxLayout` 的流式 API：
+| Component | Description |
+| --------- | ----------- |
+| `LabelComponent` | Text label with alignment, word wrap, elide |
+| `ButtonComponent` | Button with text, icon, checkable |
+| `CheckBoxComponent` | Checkbox |
+| `SwitchComponent` | Toggle switch |
+| `ProgressBarComponent` | Progress bar |
+| `CircularProgressComponent` | Circular progress indicator |
+| `SliderComponent` | Slider |
+| `SpinBoxComponent` | Number spin box |
+| `ComboBoxComponent` | Combo box |
+| `IconComponent` | Icon font character |
+| `ImageComponent` | Image with rounded corners |
+| `AvatarComponent` | Avatar with image or initials |
+| `BadgeComponent` | Badge/tag |
+| `RatingComponent` | Star rating |
+| `SeparatorComponent` | Separator line |
+| `CardComponent` | Card container |
+| `SpacerComponent` | Spacer |
+| `ExpandArrowComponent` | Expand/collapse arrow |
 
-```cpp
-setMargins(16, 8, 16, 8);  // 左, 上, 右, 下
-setSpacing(12);             // 组件间距
+## Extending
 
-addItem<SpacerComponent>("indent");         // sizeHint 决定宽度
-addItem<ExpandArrowComponent>("arrow", 16); // 固定 16px
-addItem<LabelComponent>("name", -1);        // 弹性填充
-addItem<BadgeComponent>("count", 24);       // 固定 24px
-addSpacing(8);                              // 右侧留白
+### Creating Custom Components
 
-setRowHeight(36);
-```
-
-#### 高级嵌套布局
-
-使用声明式描述符创建复杂布局：
-
-```cpp
-setLayout(HBox(16, 8, 16, 8, 12, {
-    Item("avatar", {40, 40}),
-    Stretch("info"),
-    VBox({Item("title"), Item("subtitle")}),
-    Item("action", {24, 24}),
-}));
-```
-
----
-
-## 组件库
-
-| 组件 | 描述 |
-|------|------|
-| `LabelComponent` | 文本标签，支持对齐、换行、省略 |
-| `ButtonComponent` | 按钮，支持文本、图标、可选中 |
-| `CheckBoxComponent` | 复选框 |
-| `SwitchComponent` | 开关 |
-| `ProgressBarComponent` | 进度条 |
-| `CircularProgressComponent` | 圆形进度指示器 |
-| `SliderComponent` | 滑动条 |
-| `SpinBoxComponent` | 数值调节框 |
-| `ComboBoxComponent` | 下拉框 |
-| `IconComponent` | 图标（图标字体字符） |
-| `ImageComponent` | 图片，支持圆角 |
-| `AvatarComponent` | 头像，显示图片或首字母 |
-| `BadgeComponent` | 徽章/标记 |
-| `RatingComponent` | 星级评分 |
-| `SeparatorComponent` | 分隔线 |
-| `CardComponent` | 卡片容器 |
-| `SpacerComponent` | 占位符 |
-| `ExpandArrowComponent` | 展开/折叠箭头 |
-| `DecorationIconComponent` | QIcon 装饰图标 |
-
----
-
-## 示例
-
-### Visual Studio 风格的最近项目列表
-
-完整示例位于 `demo/vs_recent/` 目录。
+Inherit from `AbstractComponent`:
 
 ```cpp
-class ProjectItemDelegate : public VLayout::DelegateController
+#include <vlayout/component.h>
+
+class ProgressCircle : public AbstractComponent
 {
 public:
-    ProjectItemDelegate(QObject* parent = nullptr) : DelegateController(parent)
+    explicit ProgressCircle(const QString& id) : AbstractComponent(id) {}
+
+    QString type() const override { return "ProgressCircle"; }
+
+    void paint(ComponentContext& ctx) override
     {
-        // 布局：[图标(36px)] [项目信息(stretch)] [日期(120px)] [图钉(24px)]
-        setMargins(24, 8, 12, 8);
-        setSpacing(8);
+        QPainter* p = ctx.painter;
+        QRect r = geometry();
+        int value = m_value;
 
-        addItem<SolutionIconComponent>("icon", 36, Qt::AlignVCenter);
-        addItem<ProjectInfoComponent>("info", -1);
-        addItem<DateComponent>("date", 120, Qt::AlignVCenter);
-        addItem<PinComponent>("pin", 24, Qt::AlignVCenter);
+        // Background circle
+        p->setPen(QPen(QColor(200, 200, 200), 3));
+        p->drawEllipse(r.center(), r.width()/2 - 3, r.height()/2 - 3);
 
-        setRowHeight(52);
+        // Progress arc
+        if (value > 0) {
+            p->setPen(QPen(QColor(76, 175, 80), 3));
+            int angle = value * 360 / 100 * 16;
+            p->drawArc(r.adjusted(3, 3, -3, -3), 90 * 16, -angle);
+        }
 
-        // 数据绑定
-        bindTo("icon")
-            .property("iconType", VS::IconTypeRole)
-            .property("name", VS::NameRole);
+        // Percentage text
+        p->drawText(r, Qt::AlignCenter, QString("%1%").arg(value));
+    }
 
-        bindTo("info")
-            .property("name", VS::NameRole)
-            .property("path", VS::PathRole);
+    void setValue(int v) { m_value = qBound(0, v, 100); update(); }
+    int value() const { return m_value; }
 
-        bindTo("date")
-            .property("date", VS::DateRole);
+private:
+    int m_value = 0;
+};
+```
 
-        bindTo("pin")
-            .checkedWhenTrue(VS::PinnedRole);
+### Registering Custom Components
 
-        // 点击切换固定状态
-        onClick("pin", [](const QModelIndex& index, IComponent*) {
-            toggleData(index, VS::PinnedRole);
-        });
+```cpp
+class MyDelegate : public DelegateController
+{
+public:
+    MyDelegate(QObject* parent = nullptr) : DelegateController(parent)
+    {
+        registerComponent<ProgressCircle>("progress");
+        addItem<ProgressCircle>("progress", 40, Qt::AlignVCenter);
+
+        bindTo("progress").property("value", ProgressRole);
     }
 };
 ```
 
----
+### Layout Item Types
 
-## API 参考
+```cpp
+// WidgetItem - For visual components
+auto widget = std::make_shared<WidgetItem>("id");
+widget->setSizeHint(QSize(100, 30));
+widget->setMinimumSize(QSize(50, 20));
+widget->setMaximumSize(QSize(200, 50));
+widget->setStretch(1);
+widget->setAlignment(Qt::AlignVCenter);
+
+// SpacerItem - For fixed spacing
+auto spacer = std::make_shared<SpacerItem>(20, 10);
+
+// BoxLayout - For nested layouts
+auto innerLayout = std::make_shared<VBoxLayout>();
+innerLayout->addItem(widget1);
+innerLayout->addItem(widget2);
+outerLayout->addItem(innerLayout);
+```
+
+## Layout Debugger
+
+VLayout includes a visual debugger:
+
+```cpp
+#include <vlayout/debugger/sandbox_widget.h>
+
+auto debugger = new VLayout::LayoutSandboxWidget();
+debugger->setWindowTitle("Layout Debugger");
+debugger->show();
+```
+
+**Features:**
+
+- Visual preview with grid background
+- Real-time parameter adjustment
+- Add/Remove layout items
+- Export/Import layout as JSON
+
+## API Reference
 
 ### DelegateController
 
 ```cpp
-// 组件管理
-addComponent(comp)           // 注册组件
-component(id)                // 获取组件
-addItem<T>(id, width, align) // 注册并加入布局
+// Components
+template<typename T>
+T* addItem(const QString& id, int width = -1, Qt::Alignment align = {});
 
-// 布局
-setLayout(descriptor)        // 高级嵌套布局
-setRow({...})               // 极简行布局
-addSpacing(width)           // 添加间距
-addStretch(stretch)         // 添加弹簧
-setMargins(left, top, right, bottom)
-setSpacing(spacing)
-setRowHeight(height)
+// Layout
+void setMargins(int left, int top, int right, int bottom);
+void setSpacing(int spacing);
+void setRowHeight(int height);
+void addSpacing(int width);
+void addStretch(int stretch = 1);
 
-// 数据绑定
-bindTo(componentId)         // 返回 BindingBuilder
-    .text(role)
-    .font(role, converter)
-    .color(role, converter)
-    .property(name, role)
-    .visibleWhen(role, condition)
-    .checkedWhenTrue(role)
-    .onClick(callback)
+// Data Binding
+BindingBuilder bindTo(const QString& componentId);
 
-// 事件
-onClick(componentId, handler)
-onAnyClick(handler)
+// Events
+void onClick(const QString& id, ClickHandler handler);
 
-// 便捷方法
-setFixedSizeHint(size)
-toggleData(index, role)
-setModelData(index, value, role)
+// Utilities
+static void toggleData(const QModelIndex& idx, int role);
+static void setModelData(const QModelIndex& idx, const QVariant& value, int role);
 ```
 
 ### BindingBuilder
 
 ```cpp
-bindTo("title")
+bindTo("component")
     .display()                          // Qt::DisplayRole
-    .text(RoleName)                     // 绑定文本
-    .text(RoleStatus, converter)        // 带转换器
-    .font(QFont("Segoe UI", 10))        // 固定字体
-    .boldFont(12)                       // 粗体字体
-    .color(QColor(255, 255, 255))       // 固定颜色
-    .color(RoleStatus, colorConverter)  // 条件颜色
-    .property("sizeHint", RoleSize)     // 任意属性
-    .visibleWhenNotEmpty(RoleBadge)     // 非空时可见
-    .checkedWhenTrue(RoleChecked)       // true 时选中
-    .onClick(handler);                  // 点击事件
+    .text(int role)                     // Bind text
+    .text(int role, Converter conv)     // With converter
+    .font(const QFont& font)            // Fixed font
+    .boldFont(int pointSize)            // Bold font
+    .color(const QColor& color)         // Fixed color
+    .color(int role, ColorConverter)    // Conditional color
+    .property(const QString& name, int role)
+    .visibleWhen(int role, Condition)
+    .visibleWhenNotEmpty(int role)
+    .checkedWhenTrue(int role)
+    .onClick(ClickHandler);
 ```
 
----
+## Project Structure
 
-## 项目结构
-
-```
+```text
 VLayout/
-├── VLayout.pro              # 顶层项目文件 (subdirs)
-├── README.md
-├── docs/                    # 文档
-│   └── plans/               # 设计文档
+├── src/vlayout/           # Core library
+│   ├── framework.h        # Main include
+│   ├── component.h        # Component interface
+│   ├── components.h       # Built-in components
+│   ├── binding.h          # Data binding
+│   ├── delegatecontroller.h
+│   ├── boxlayout.h        # Layout engine
+│   ├── layoutitem.h       # Layout item base
+│   ├── widgetitem.h       # Widget item
+│   ├── spaceritem.h       # Spacer item
+│   └── debugger/          # Debug tools
 │
-├── src/                     # 库源码
-│   ├── src.pro              # 库项目文件
-│   └── vlayout/             # 核心框架
-│       ├── framework.h           # 框架入口
-│       ├── global.h              # 全局定义
-│       ├── component.h/.cpp      # 组件接口和基类
-│       ├── components.h/.cpp     # 内置组件库
-│       ├── binding.h             # 数据绑定系统
-│       ├── delegatecontroller.h/.cpp  # 核心 Delegate
-│       ├── layoutdescriptor.h    # 布局描述符
-│       ├── boxlayout.h/.cpp      # Box 布局引擎
-│       ├── layoutitem.h/.cpp     # 布局项基类
-│       ├── widgetitem.h/.cpp     # Widget 布局项
-│       ├── spaceritem.h/.cpp     # Spacer 弹簧项
-│       └── vlayout.pri           # qmake 包含文件
-│
-├── tests/                   # 单元测试
-│   ├── tests.pro
-│   └── auto/
-│       └── tst_delegate.cpp
-│
-└── examples/                # 示例项目
-    ├── examples.pro
-    ├── vs_recent/           # VS 风格最近项目列表
-    └── timeline/            # AI 编程助手时间轴
+├── tests/                 # Unit tests
+├── examples/              # Examples
+└── docs/                  # Documentation
 ```
 
----
+## Contributing
 
-## 许可证
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-MIT License
+## License
 
-Copyright (c) 2024
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-<p align="center">
-  Made with ❤️ for Qt Developers
-</p>
+Made with ❤️ for Qt Developers

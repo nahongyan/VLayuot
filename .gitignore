@@ -31,3 +31,23 @@ qrc_*.cpp
 *.tmp
 *.bak
 *~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+CMakeLists.txt
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# CLion IDE cache
+.qtc_clangd/
+
+# Windows artifacts
+nul

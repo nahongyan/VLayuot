@@ -525,13 +525,24 @@ void LayoutSandboxWidget::onAddItemClicked()
         if (!ok) return;
 
         int size = QInputDialog::getInt(this, tr("固定尺寸项"),
-                                        tr("尺寸 (px):"), 40, 1, 1000, 1, &ok);
+                                        tr("主方向尺寸 (px):"), 40, 1, 1000, 1, &ok);
+        if (!ok) return;
+
+        int crossSize = QInputDialog::getInt(this, tr("固定尺寸项"),
+                                             tr("交叉方向尺寸 (px):\n(0 = 填满容器)"), 0, 0, 1000, 1, &ok);
         if (!ok) return;
 
         item.id = id;
         item.sizeHint = size;
         item.minSize = size;
         item.maxSize = size;
+        // 交叉方向
+        if (crossSize > 0) {
+            item.crossSizeHint = crossSize;
+            item.crossMinSize = crossSize;
+            item.crossMaxSize = crossSize;
+        }
+        // else: 使用默认值 (0, 0, 1000000) = 填满容器
     }
     else if (type == tr("弹性项")) {
         QString id = QInputDialog::getText(this, tr("弹性项"),

@@ -17,7 +17,7 @@ namespace VLayout {
 
 SandboxScene::SandboxScene(QObject* parent)
     : QGraphicsScene(parent)
-    , m_layout(std::make_shared<HBoxLayout>())  // 默认水平布局
+    , m_layout(std::make_shared<HBoxLayout>())
 {
     setBackgroundBrush(QColor(245, 245, 245));
     createContainerItem();
@@ -25,7 +25,6 @@ SandboxScene::SandboxScene(QObject* parent)
 
 SandboxScene::~SandboxScene()
 {
-    // 图形项由 scene 自动管理
 }
 
 // ========== 布局访问 ==========
@@ -121,6 +120,7 @@ void SandboxScene::setItems(const std::vector<SandboxItem>& items)
             widget->setMinimumSize(QSize(item.minSize, item.crossMinSize));
             widget->setMaximumSize(QSize(item.maxSize, item.crossMaxSize));
             widget->setStretch(item.stretch);
+            widget->setAlignment(item.alignment);
             m_layout->addItem(widget);
         }
     }
@@ -139,7 +139,6 @@ void SandboxScene::clearItems()
         m_layout->clear();
     }
 
-    // 清除布局项图形
     for (auto* item : m_layoutItems) {
         removeItem(item);
         delete item;
@@ -160,7 +159,6 @@ void SandboxScene::setSelectedIndex(int index)
 {
     m_selectedIndex = index;
 
-    // 更新视觉效果
     for (size_t i = 0; i < m_layoutItems.size(); ++i) {
         m_layoutItems[i]->setSelectedVisual(static_cast<int>(i) == index);
     }
@@ -176,10 +174,8 @@ void SandboxScene::computeLayout()
         return;
     }
 
-    // 设置布局的几何区域
-    QRect layoutRect(m_leftMargin, m_topMargin,
-                     m_containerSize.width() - m_leftMargin - m_rightMargin,
-                     m_containerSize.height() - m_topMargin - m_bottomMargin);
+    // 设置布局的几何区域（完整容器区域，由 BoxLayout::doLayout 内部处理 margins）
+    QRect layoutRect(0, 0, m_containerSize.width(), m_containerSize.height());
     m_layout->setGeometry(layoutRect);
 
     // 执行布局计算
@@ -223,7 +219,7 @@ QString SandboxScene::generateDiagnostics() const
 
         used += mainSize;
         if (i < m_layout->count() - 1) {
-            used += m_layout->spacing();  // 间距
+            used += m_layout->spacing();
         }
 
         if (mainSize < hintSize) compressed++;
@@ -261,19 +257,16 @@ void SandboxScene::drawBackground(QPainter* painter, const QRectF& rect)
     QPen thinPen(QColor(220, 220, 220), 1, Qt::DotLine);
     QPen thickPen(QColor(180, 180, 180), 1, Qt::DashLine);
 
-    // 只在可见区域绘制
     int left = static_cast<int>(rect.left()) - (static_cast<int>(rect.left()) % m_gridSmallStep);
     int top = static_cast<int>(rect.top()) - (static_cast<int>(rect.top()) % m_gridSmallStep);
     int right = static_cast<int>(rect.right());
     int bottom = static_cast<int>(rect.bottom());
 
-    // 垂直线
     for (int x = left; x <= right; x += m_gridSmallStep) {
         painter->setPen((x % m_gridLargeStep == 0) ? thickPen : thinPen);
         painter->drawLine(x, static_cast<int>(rect.top()), x, static_cast<int>(rect.bottom()));
     }
 
-    // 水平线
     for (int y = top; y <= bottom; y += m_gridSmallStep) {
         painter->setPen((y % m_gridLargeStep == 0) ? thickPen : thinPen);
         painter->drawLine(static_cast<int>(rect.left()), y, static_cast<int>(rect.right()), y);
@@ -371,7 +364,7 @@ void SandboxScene::rebuildLayoutItems()
         connect(graphics, &LayoutItemGraphics::doubleClicked, this, &SandboxScene::itemDoubleClicked);
         m_layoutItems.push_back(graphics);
         addItem(graphics);
-        m_items.push_back(SandboxItem());  // 占位，将在 updateLayoutItems 中填充
+        m_items.push_back(SandboxItem());
     }
 
     updateLayoutItems();

@@ -598,7 +598,8 @@ void BoxLayout::doLayout(const QRect& rect)
             }
 
             // 如果设置了水平方向的对齐，改用 sizeHint 宽度，并在合法范围内 clamp
-            if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter)) {
+            // 注意：不检查 AlignCenter，因为它包含垂直对齐
+            if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter)) {
                 itemWidth = hint.width();
                 // 保证 max >= min 再调用 qBound
                 const int effMax = (maxSize.width() < SizeMax)
@@ -609,7 +610,7 @@ void BoxLayout::doLayout(const QRect& rect)
 
             // 计算非布局方向（垂直）的尺寸
             int itemHeight;
-            if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter)) {
+            if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter)) {
                 // 有垂直对齐：使用 sizeHint 高度，clamp 到 [min, max] 并不超过 available
                 itemHeight = hint.height();
                 itemHeight = qMax(itemHeight, minSize.height());
@@ -636,7 +637,8 @@ void BoxLayout::doLayout(const QRect& rect)
             }
 
             // 如果设置了垂直方向的对齐，改用 sizeHint 高度，并在合法范围内 clamp
-            if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter | Qt::AlignCenter)) {
+            // 注意：不检查 AlignCenter，因为它包含水平对齐
+            if (align & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter)) {
                 itemHeight = hint.height();
                 const int effMax = (maxSize.height() < SizeMax)
                     ? qMax(maxSize.height(), minSize.height())
@@ -646,7 +648,7 @@ void BoxLayout::doLayout(const QRect& rect)
 
             // 计算非布局方向（水平）的尺寸
             int itemWidth;
-            if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter | Qt::AlignCenter)) {
+            if (align & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter)) {
                 // 有水平对齐：使用 sizeHint 宽度，clamp 到 [min, max] 并不超过 available
                 itemWidth = hint.width();
                 itemWidth = qMax(itemWidth, minSize.width());

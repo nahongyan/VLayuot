@@ -3,4 +3,5 @@ TEMPLATE = subdirs
 SUBDIRS += \
     vs_recent \
     timeline \
-    debugger
+    debugger \
+    sandbox_test
