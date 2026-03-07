@@ -7,6 +7,7 @@
  */
 
 #include <QString>
+#include <QFlags>
 
 namespace VLayout {
 
@@ -30,6 +31,7 @@ struct SandboxItem
     int crossMaxSize = 1000000;  ///< 交叉方向最大尺寸
 
     bool isSpacing = false; ///< 是否为间隔项
+    Qt::Alignment alignment = {}; ///< 对齐方式
 
     // 计算结果（由布局算法填充）
     int pos = 0;            ///< 主方向位置
