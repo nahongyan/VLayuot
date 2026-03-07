@@ -30,7 +30,7 @@ Declarative Delegate Framework for Qt
 **Option 1: Build as Library (Recommended)**
 
 ```bash
-git clone https://github.com/yourusername/vlayout.git
+git clone https://github.com/nahongyan/VLayout.git
 cd vlayout
 qmake VLayout.pro
 make

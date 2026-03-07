@@ -30,7 +30,7 @@
 **方式一：构建为库（推荐）**
 
 ```bash
-git clone https://github.com/yourusername/vlayout.git
+git clone https://github.com/nahongyan/VLayout.git
 cd vlayout
 qmake VLayout.pro
 make
