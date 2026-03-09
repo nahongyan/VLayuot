@@ -5,14 +5,6 @@
 namespace VLayout {
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-namespace {
-    constexpr int DefaultMaxSize = 16777215;
-}
-
-// ============================================================================
 // AbstractComponent Implementation
 // ============================================================================
 
@@ -20,7 +12,7 @@ AbstractComponent::AbstractComponent(const QString& id)
     : m_id(id)
     , m_sizeHint(100, 30)
     , m_minimumSize(0, 0)
-    , m_maximumSize(DefaultMaxSize, DefaultMaxSize)
+    , m_maximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX)
 {
 }
 

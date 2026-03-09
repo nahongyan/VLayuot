@@ -18,18 +18,14 @@
 #include <QVariant>
 #include <QModelIndex>
 #include <QStyleOptionViewItem>
+#include <QtGlobal>  // For QWIDGETSIZE_MAX
 #include <memory>
 #include <functional>
 #include <unordered_map>
 
 namespace VLayout {
 
-// ============================================================================
-// 常量定义
-// ============================================================================
-
-/// 默认最大尺寸，与 Qt 的 QWIDGETSIZE_MAX 对应
-constexpr int DefaultMaxSize = 16777215;
+// 使用 Qt 内置的 QWIDGETSIZE_MAX 常量 (16777215)
 
 // ============================================================================
 // ComponentState - 组件状态标志
@@ -347,7 +343,7 @@ protected:
     QRect m_geometry;                   ///< 当前几何位置
     QSize m_sizeHint = QSize(100, 30);  ///< 首选尺寸
     QSize m_minimumSize;                ///< 最小尺寸
-    QSize m_maximumSize = QSize(DefaultMaxSize, DefaultMaxSize);  ///< 最大尺寸
+    QSize m_maximumSize = QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);  ///< 最大尺寸
     int m_states = static_cast<int>(ComponentState::Enabled) | static_cast<int>(ComponentState::Visible); ///< 状态标志
     std::unordered_map<QString, QVariant> m_properties;  ///< 自定义属性映射
     QVariant m_data;                    ///< 绑定数据
