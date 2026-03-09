@@ -10,7 +10,7 @@
 ****************************************************************************/
 
 #include "flowlayoutengine.h"
-#include "../framework.h"
+#include <vlayout/framework.h>
 #include <algorithm>
 #include <QDebug>
 

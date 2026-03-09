@@ -11,7 +11,7 @@
 
 #include "flowview.h"
 #include "flowlayoutengine.h"
-#include "../framework.h"
+#include <vlayout/framework.h>
 #include <QScrollBar>
 #include <QPainter>
 #include <QMouseEvent>
