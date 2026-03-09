@@ -33,10 +33,6 @@ BoxLayout::BoxLayout(Direction direction)
 {
 }
 
-BoxLayout::~BoxLayout()
-{
-}
-
 void BoxLayout::setDirection(Direction direction)
 {
     if (m_direction != direction) {

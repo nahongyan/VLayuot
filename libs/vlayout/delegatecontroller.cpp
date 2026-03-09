@@ -14,10 +14,6 @@ DelegateController::DelegateController(QObject* parent)
 {
 }
 
-DelegateController::~DelegateController()
-{
-}
-
 // ============================================================================
 // 组件管理
 // ============================================================================

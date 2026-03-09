@@ -78,8 +78,8 @@ enum class ItemType {
 class VLAYOUT_EXPORT LayoutItem
 {
 public:
-    LayoutItem();
-    virtual ~LayoutItem();
+    LayoutItem() = default;
+    virtual ~LayoutItem() = default;
 
     // 禁用拷贝（布局项通过 shared_ptr 共享）
     LayoutItem(const LayoutItem&) = delete;
@@ -280,8 +280,7 @@ using LayoutItemWeakPtr = std::weak_ptr<LayoutItem>;
 class VLAYOUT_EXPORT Layout : public LayoutItem
 {
 public:
-    Layout();
-    ~Layout() override;
+    Layout() = default;
 
     // ========== 子项管理 ==========
 

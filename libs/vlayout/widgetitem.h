@@ -15,6 +15,10 @@
 #include <functional>
 #include <unordered_map>
 
+#include "vlayout/global.h"  // For SizeMax constant
+
+#include "component.h"  // For DefaultMaxSize
+
 namespace VLayout {
 
 // ============================================================================

@@ -111,7 +111,6 @@ class VLAYOUT_EXPORT DelegateController : public QStyledItemDelegate
 
 public:
     explicit DelegateController(QObject* parent = nullptr);
-    ~DelegateController() override;
 
     // ========== 组件管理 ==========
 

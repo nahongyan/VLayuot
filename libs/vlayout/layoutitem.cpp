@@ -7,15 +7,100 @@ namespace VLayout {
 // LayoutItem 实现
 // ============================================================================
 
-LayoutItem::LayoutItem()
-{
-}
-
-LayoutItem::~LayoutItem()
-{
-}
-
 QSize LayoutItem::minimumSize() const
+{
+    return {0, 0};
+}
+
+QSize LayoutItem::maximumSize() const
+{
+    return {SizeMax, SizeMax};
+}
+
+Qt::Orientations LayoutItem::expandingDirections() const
+{
+    return {};
+}
+
+void LayoutItem::setGeometry(const QRect& rect)
+{
+    m_geometry = rect;
+    m_valid = true;
+}
+
+QRect LayoutItem::geometry() const
+{
+    return m_geometry;
+}
+
+QRect LayoutItem::finalRect() const
+{
+    return m_finalRect;
+}
+
+void LayoutItem::setFinalRect(const QRect& rect)
+{
+    m_finalRect = rect;
+}
+
+void LayoutItem::setAlignment(Qt::Alignment alignment)
+{
+    m_alignment = alignment;
+}
+
+Qt::Alignment LayoutItem::alignment() const
+{
+    return m_alignment;
+}
+
+void LayoutItem::setStretch(int stretch)
+{
+    m_stretch = stretch;
+}
+
+int LayoutItem::stretch() const
+{
+    return m_stretch;
+}
+
+bool LayoutItem::isEmpty() const
+{
+    return false;
+}
+
+Layout* LayoutItem::parentLayout() const
+{
+    return m_parentLayout;
+}
+
+void LayoutItem::setParentLayout(Layout* parent)
+{
+    m_parentLayout = parent;
+}
+
+void LayoutItem::invalidate()
+{
+    m_valid = false;
+    if (m_parentLayout) {
+        m_parentLayout->invalidate();
+    }
+}
+
+bool LayoutItem::isValid() const
+{
+    return m_valid;
+}
+
+void LayoutItem::doLayout(const QRect& rect)
+{
+    Q_UNUSED(rect)
+}
+
+// ============================================================================
+// Layout 实现
+// ============================================================================
+
+void Layout::addItem(LayoutItemPtr item)
 {
     return QSize(0, 0);
 }
@@ -110,14 +195,17 @@ void LayoutItem::doLayout(const QRect& rect)
 // Layout 实现
 // ============================================================================
 
-Layout::Layout()
-    : LayoutItem()
+void Layout::clear()
 {
-}
-
-Layout::~Layout()
-{
-    clear();
+    for (auto& item : m_items) {
+        if (item) {
+            item->setParentLayout(nullptr);
+        }
+    }
+    m_items.clear();
+    // 释放 vector 容量，减少内存占用
+    m_items.shrink_to_fit();
+    invalidate();
 }
 
 void Layout::addItem(LayoutItemPtr item)

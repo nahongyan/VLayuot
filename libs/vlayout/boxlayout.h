@@ -113,8 +113,6 @@ public:
      */
     explicit BoxLayout(Direction direction = Direction::LeftToRight);
 
-    ~BoxLayout() override;
-
     // ========== 方向 ==========
 
     /**
