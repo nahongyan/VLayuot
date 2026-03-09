@@ -102,7 +102,7 @@ void LayoutItem::doLayout(const QRect& rect)
 
 void Layout::addItem(LayoutItemPtr item)
 {
-    return QSize(0, 0);
+    m_items.push_back(item);
 }
 
 QSize LayoutItem::maximumSize() const
