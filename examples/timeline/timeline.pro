@@ -24,8 +24,11 @@ UI_DIR = $$VAYOUT_OBJ_BASE/timeline_demo/ui
 INCLUDEPATH += $$VAYOUT_INCLUDEPATH
 LIBS += -L$$VAYOUT_LIBPATH -lvlayout
 
+# 启用 FlowView 模块
+DEFINES += VLAYOUT_FLOWVIEW
+
 # 引入 AI SDK (CLI 适配器)
-include(../../src/aisdk/aisdk.pri)
+include(../../libs/aisdk/aisdk.pri)
 
 # Timeline 组件源文件
 SOURCES += \

@@ -29,14 +29,14 @@ CONFIG(debug, debug|release) {
 }
 
 # ============================================================
-# VLayout 库配置
+# 库配置
 # ============================================================
 
-# 使用共享库（tests/examples 需要这个来正确导入符号）
+# 使用共享库
 DEFINES += VLAYOUT_SHARED
 
-# 库头文件路径
-VAYOUT_INCLUDEPATH = $$PROJECT_ROOT/src
+# 库头文件路径 (libs/ 目录，使得 #include <vlayout/framework.h> 生效)
+VAYOUT_INCLUDEPATH = $$PROJECT_ROOT/libs
 
 # 库文件输出路径
 VAYOUT_LIBPATH = $$BUILD_ROOT/lib

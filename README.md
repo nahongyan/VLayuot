@@ -38,10 +38,10 @@ make
 
 **Option 2: Include Source**
 
-Copy `src/vlayout` to your project and add to `.pro`:
+Copy `libs/vlayout` to your project and add to `.pro`:
 
 ```qmake
-include(src/vlayout/vlayout.pri)
+include(libs/vlayout/vlayout_source.pri)
 ```
 
 ### Minimal Example
@@ -318,17 +318,20 @@ bindTo("component")
 
 ```text
 VLayout/
-├── src/vlayout/           # Core library
-│   ├── framework.h        # Main include
-│   ├── component.h        # Component interface
-│   ├── components.h       # Built-in components
-│   ├── binding.h          # Data binding
-│   ├── delegatecontroller.h
-│   ├── boxlayout.h        # Layout engine
-│   ├── layoutitem.h       # Layout item base
-│   ├── widgetitem.h       # Widget item
-│   ├── spaceritem.h       # Spacer item
-│   └── debugger/          # Debug tools
+├── libs/
+│   ├── vlayout/           # Core library
+│   │   ├── framework.h    # Main include
+│   │   ├── component.h    # Component interface
+│   │   ├── components.h   # Built-in components
+│   │   ├── binding.h      # Data binding
+│   │   ├── delegatecontroller.h
+│   │   ├── boxlayout.h    # Layout engine
+│   │   ├── layoutitem.h   # Layout item base
+│   │   ├── widgetitem.h   # Widget item
+│   │   ├── spaceritem.h   # Spacer item
+│   │   ├── debugger/      # Debug tools
+│   │   └── flowview/      # High-performance virtualized list
+│   └── aisdk/             # AI CLI adapters (optional)
 │
 ├── tests/                 # Unit tests
 ├── examples/              # Examples

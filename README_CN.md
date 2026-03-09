@@ -38,10 +38,10 @@ make
 
 **方式二：包含源码**
 
-将 `src/vlayout` 复制到你的项目，并在 `.pro` 文件中添加：
+将 `libs/vlayout` 复制到你的项目，并在 `.pro` 文件中添加：
 
 ```qmake
-include(src/vlayout/vlayout.pri)
+include(libs/vlayout/vlayout_source.pri)
 ```
 
 ### 最小示例
@@ -385,17 +385,20 @@ bindTo("component")
 
 ```text
 VLayout/
-├── src/vlayout/           # 核心库
-│   ├── framework.h        # 主包含文件
-│   ├── component.h        # 组件接口
-│   ├── components.h       # 内置组件
-│   ├── binding.h          # 数据绑定
-│   ├── delegatecontroller.h
-│   ├── boxlayout.h        # 布局引擎
-│   ├── layoutitem.h       # 布局项基类
-│   ├── widgetitem.h       # Widget 项
-│   ├── spaceritem.h       # Spacer 项
-│   └── debugger/          # 调试工具
+├── libs/
+│   ├── vlayout/           # 核心库
+│   │   ├── framework.h    # 主包含文件
+│   │   ├── component.h    # 组件接口
+│   │   ├── components.h   # 内置组件
+│   │   ├── binding.h      # 数据绑定
+│   │   ├── delegatecontroller.h
+│   │   ├── boxlayout.h    # 布局引擎
+│   │   ├── layoutitem.h   # 布局项基类
+│   │   ├── widgetitem.h   # Widget 项
+│   │   ├── spaceritem.h   # Spacer 项
+│   │   ├── debugger/      # 调试工具
+│   │   └── flowview/      # 高性能虚拟化列表
+│   └── aisdk/             # AI CLI 适配器（可选）
 │
 ├── tests/                 # 单元测试
 ├── examples/              # 示例
