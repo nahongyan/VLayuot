@@ -14,10 +14,9 @@ TEMPLATE = subdirs
 
 SUBDIRS += \
     libs/vlayout \
-    libs/aisdk \
     tests \
     examples
 
-# 依赖关系：tests 和 examples 依赖 vlayout 和 aisdk
+# 依赖关系：tests 和 examples 依赖 vlayout
 tests.depends = libs/vlayout
-examples.depends = libs/vlayout libs/aisdk
+examples.depends = libs/vlayout

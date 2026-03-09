@@ -28,7 +28,7 @@ LIBS += -L$$VAYOUT_LIBPATH -lvlayout
 DEFINES += VLAYOUT_FLOWVIEW
 
 # 引入 AI SDK (CLI 适配器)
-include(../../libs/aisdk/aisdk.pri)
+include(../aisdk/aisdk.pri)
 
 # Timeline 组件源文件
 SOURCES += \
