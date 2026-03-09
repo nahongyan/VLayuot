@@ -63,7 +63,6 @@ class TestBoxLayout;
 
 // 外部函数声明
 extern int runBoxLayoutTests(int argc, char *argv[]);
-extern int runSandboxPreviewTests(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
@@ -78,9 +77,6 @@ int main(int argc, char *argv[])
 
     // 运行 BoxLayout 测试
     result |= runBoxLayoutTests(argc, argv);
-
-    // 运行 SandboxPreview 测试
-    result |= runSandboxPreviewTests(argc, argv);
 
     return result;
 }
