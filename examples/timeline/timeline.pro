@@ -22,6 +22,7 @@ UI_DIR = $$VAYOUT_OBJ_BASE/timeline_demo/ui
 
 # 链接 vlayout 和 views 库
 INCLUDEPATH += $$VAYOUT_INCLUDEPATH
+DEFINES += VIEWS_SHARED
 LIBS += -L$$VAYOUT_LIBPATH -lvlayout -lviews
 
 # 引入 AI SDK (CLI 适配器)
