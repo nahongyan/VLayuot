@@ -50,15 +50,3 @@ SOURCES += \
     $$PWD/boxlayout.cpp \
     $$PWD/spaceritem.cpp \
     $$PWD/widgetitem.cpp
-
-# ============================================================
-# 可选模块
-# ============================================================
-
-# 调试器模块（始终启用）
-DEFINES += VLAYOUT_DEBUGGER
-include($$PWD/debugger/debugger.pri)
-
-# FlowView 模块（始终启用）
-DEFINES += VLAYOUT_FLOWVIEW
-include($$PWD/flowview/flowview.pri)

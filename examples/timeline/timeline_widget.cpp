@@ -3,13 +3,16 @@
 #include "timeline_delegate.h"
 #include "timeline_theme.h"
 
-#include <QListView>
+#include <views/flowview/flowview.h>
+
 #include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollBar>
 #include <QTimer>
+#include <QElapsedTimer>
+#include <QDebug>
 
 namespace Timeline {
 
@@ -118,6 +121,19 @@ void TimelineWidget::loadSampleData()
     scrollToBottom();
 }
 
+void TimelineWidget::loadBulkTestData(int count)
+{
+    QElapsedTimer timer;
+    timer.start();
+
+    m_model->loadBulkTestData(count);
+    qint64 loadTime = timer.elapsed();
+
+    scrollToBottom();
+
+    qDebug() << "加载" << count << "条数据, 耗时:" << loadTime << "ms";
+}
+
 void TimelineWidget::scrollToBottom()
 {
     QTimer::singleShot(100, this, [this]() {
@@ -136,16 +152,10 @@ void TimelineWidget::setupUI()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // ========== 时间轴列表视图 ==========
+    // ========== 时间轴列表视图 (使用 FlowView 实现高性能虚拟化渲染) ==========
 
-    m_listView = new QListView(this);
+    m_listView = new VLayout::FlowView(this);
     m_listView->setObjectName(QStringLiteral("timelineList"));
-
-    // 基本设置
-    m_listView->setFrameShape(QFrame::NoFrame);
-    m_listView->setSelectionMode(QAbstractItemView::NoSelection);
-    m_listView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_listView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     // 启用鼠标追踪以支持悬停效果
     m_listView->setMouseTracking(true);
@@ -184,7 +194,7 @@ void TimelineWidget::setupUI()
     m_listView->setModel(m_model);
 
     m_delegate = new TimelineDelegate(this);
-    m_listView->setItemDelegate(m_delegate);
+    m_listView->setDelegate(m_delegate);  // FlowView 使用 setDelegate 而不是 setItemDelegate
 }
 
 void TimelineWidget::setupConnections()

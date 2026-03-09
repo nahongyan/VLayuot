@@ -20,12 +20,9 @@ MOC_DIR = $$VAYOUT_OBJ_BASE/timeline_demo/moc
 RCC_DIR = $$VAYOUT_OBJ_BASE/timeline_demo/rcc
 UI_DIR = $$VAYOUT_OBJ_BASE/timeline_demo/ui
 
-# 链接 vlayout 库
+# 链接 vlayout 和 views 库
 INCLUDEPATH += $$VAYOUT_INCLUDEPATH
-LIBS += -L$$VAYOUT_LIBPATH -lvlayout
-
-# 启用 FlowView 模块
-DEFINES += VLAYOUT_FLOWVIEW
+LIBS += -L$$VAYOUT_LIBPATH -lvlayout -lviews
 
 # 引入 AI SDK (CLI 适配器)
 include(../aisdk/aisdk.pri)
