@@ -102,114 +102,6 @@ void LayoutItem::doLayout(const QRect& rect)
 
 void Layout::addItem(LayoutItemPtr item)
 {
-    m_items.push_back(item);
-}
-
-QSize LayoutItem::maximumSize() const
-{
-    return QSize(SizeMax, SizeMax);
-}
-
-Qt::Orientations LayoutItem::expandingDirections() const
-{
-    return Qt::Orientations();
-}
-
-void LayoutItem::setGeometry(const QRect& rect)
-{
-    m_geometry = rect;
-    m_valid = true;
-}
-
-QRect LayoutItem::geometry() const
-{
-    return m_geometry;
-}
-
-QRect LayoutItem::finalRect() const
-{
-    return m_finalRect;
-}
-
-void LayoutItem::setFinalRect(const QRect& rect)
-{
-    m_finalRect = rect;
-}
-
-void LayoutItem::setAlignment(Qt::Alignment alignment)
-{
-    m_alignment = alignment;
-}
-
-Qt::Alignment LayoutItem::alignment() const
-{
-    return m_alignment;
-}
-
-void LayoutItem::setStretch(int stretch)
-{
-    m_stretch = stretch;
-}
-
-int LayoutItem::stretch() const
-{
-    return m_stretch;
-}
-
-bool LayoutItem::isEmpty() const
-{
-    return false;
-}
-
-Layout* LayoutItem::parentLayout() const
-{
-    return m_parentLayout;
-}
-
-void LayoutItem::setParentLayout(Layout* parent)
-{
-    m_parentLayout = parent;
-}
-
-void LayoutItem::invalidate()
-{
-    m_valid = false;
-    // 向上传播到父布局
-    if (m_parentLayout) {
-        m_parentLayout->invalidate();
-    }
-}
-
-bool LayoutItem::isValid() const
-{
-    return m_valid;
-}
-
-void LayoutItem::doLayout(const QRect& rect)
-{
-    Q_UNUSED(rect);
-    // 默认实现不做任何操作，子类重写
-}
-
-// ============================================================================
-// Layout 实现
-// ============================================================================
-
-void Layout::clear()
-{
-    for (auto& item : m_items) {
-        if (item) {
-            item->setParentLayout(nullptr);
-        }
-    }
-    m_items.clear();
-    // 释放 vector 容量，减少内存占用
-    m_items.shrink_to_fit();
-    invalidate();
-}
-
-void Layout::addItem(LayoutItemPtr item)
-{
     if (!item) {
         return;
     }
@@ -229,7 +121,6 @@ void Layout::insertItem(int index, LayoutItemPtr item)
 
     const int count = static_cast<int>(m_items.size());
     if (index < 0 || index > count) {
-        // 索引超出范围，追加到末尾
         m_items.push_back(std::move(item));
     } else {
         m_items.insert(m_items.begin() + index, std::move(item));
@@ -253,14 +144,12 @@ void Layout::removeItem(LayoutItemPtr item)
 
 void Layout::clear()
 {
-    // 清除所有子项的父布局引用
     for (auto& item : m_items) {
         if (item) {
             item->setParentLayout(nullptr);
         }
     }
     m_items.clear();
-    // 释放 vector 容量，减少内存占用
     m_items.shrink_to_fit();
     invalidate();
 }
@@ -302,12 +191,10 @@ int Layout::spacing() const
 
 void Layout::activate()
 {
-    // 检查几何区域是否有效
     if (!m_geometry.isValid() || m_geometry.isEmpty()) {
         return;
     }
 
-    // 执行布局计算
     if (!m_items.empty()) {
         doLayout(m_geometry);
         m_valid = true;
