@@ -12,7 +12,10 @@
 #include <QVariantMap>
 #include <vector>
 
-class QListView;
+namespace VLayout {
+class FlowView;
+}
+
 class QLineEdit;
 class QLabel;
 
@@ -150,6 +153,12 @@ public:
     void loadSampleData();
 
     /**
+     * @brief 加载大量测试数据
+     * @param count 数据量
+     */
+    void loadBulkTestData(int count = 100000);
+
+    /**
      * @brief 滚动到底部
      */
     void scrollToBottom();
@@ -182,13 +191,13 @@ private slots:
 
 private:
     // ========== UI 组件 ==========
-    QListView* m_listView = nullptr;        ///< 时间轴列表视图
-    QLineEdit* m_inputEdit = nullptr;       ///< 输入框
-    QWidget* m_inputContainer = nullptr;    ///< 输入区域容器
+    VLayout::FlowView* m_listView = nullptr;  ///< 时间轴列表视图 (使用 FlowView 实现高性能虚拟化渲染)
+    QLineEdit* m_inputEdit = nullptr;         ///< 输入框
+    QWidget* m_inputContainer = nullptr;      ///< 输入区域容器
 
     // ========== 数据 ==========
-    TimelineModel* m_model = nullptr;       ///< 数据模型
-    TimelineDelegate* m_delegate = nullptr; ///< 委托
+    TimelineModel* m_model = nullptr;         ///< 数据模型
+    TimelineDelegate* m_delegate = nullptr;   ///< 委托
 };
 
 } // namespace Timeline

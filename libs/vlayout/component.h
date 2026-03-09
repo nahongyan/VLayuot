@@ -1,4 +1,4 @@
-#ifndef VLAYOUT_COMPONENT_H
+﻿#ifndef VLAYOUT_COMPONENT_H
 #define VLAYOUT_COMPONENT_H
 
 /**
@@ -19,8 +19,6 @@
 #include <QModelIndex>
 #include <QStyleOptionViewItem>
 #include <QtGlobal>  // For QWIDGETSIZE_MAX
-#include <memory>
-#include <functional>
 #include <unordered_map>
 
 namespace VLayout {

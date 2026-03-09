@@ -257,6 +257,12 @@ public:
     void loadSampleData();
 
     /**
+     * @brief 加载大量测试数据（性能测试用）
+     * @param count 数据条数
+     */
+    void loadBulkTestData(int count = 100000);
+
+    /**
      * @brief 根据 ID 获取节点索引
      * @param nodeId 节点 ID
      * @return 模型索引，未找到返回无效索引

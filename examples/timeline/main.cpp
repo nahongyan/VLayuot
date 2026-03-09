@@ -11,8 +11,13 @@
 
 #include <QApplication>
 #include <QMainWindow>
+#include <QToolBar>
+#include <QSpinBox>
+#include <QLabel>
+#include <QPushButton>
 #include <QTimer>
 #include <QDebug>
+#include <QElapsedTimer>
 
 /**
  * @brief 主窗口类
@@ -30,19 +35,78 @@ public:
         setCentralWidget(m_timeline);
 
         // 设置窗口属性
-        setWindowTitle(tr("Timeline Demo (Ollama)"));
+        setWindowTitle(tr("Timeline Demo (FlowView 高性能虚拟化)"));
         resize(900, 700);
+
+        // 创建工具栏
+        setupToolBar();
 
         // 初始化适配器
         setupAdapter();
 
-        // 加载示例数据
-        QTimer::singleShot(500, this, [this]() {
-            m_timeline->loadSampleData();
+        // 加载大数据测试
+        QTimer::singleShot(100, this, [this]() {
+            loadBulkTestData(100000);
         });
     }
 
 private:
+    void setupToolBar()
+    {
+        QToolBar* toolbar = addToolBar(tr("测试工具"));
+
+        // 数据量选择
+        toolbar->addWidget(new QLabel(tr("数据量: ")));
+
+        m_countSpin = new QSpinBox(this);
+        m_countSpin->setRange(1000, 1000000);
+        m_countSpin->setValue(100000);
+        m_countSpin->setSingleStep(10000);
+        toolbar->addWidget(m_countSpin);
+
+        // 加载测试数据按钮
+        auto* loadBtn = new QPushButton(tr("加载测试数据"), this);
+        connect(loadBtn, &QPushButton::clicked, this, [this]() {
+            int count = m_countSpin->value();
+            loadBulkTestData(count);
+        });
+        toolbar->addWidget(loadBtn);
+
+        // 快捷按钮
+        auto* quick100kBtn = new QPushButton(tr("🚀 10万数据测试"), this);
+        quick100kBtn->setStyleSheet("QPushButton { background: #e91e63; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px; }"
+                                    "QPushButton:hover { background: #c73657; }");
+        connect(quick100kBtn, &QPushButton::clicked, this, [this]() {
+            m_countSpin->setValue(100000);
+            loadBulkTestData(100000);
+        });
+        toolbar->addWidget(quick100kBtn);
+
+        toolbar->addSeparator();
+
+        // 状态标签
+        m_statusLabel = new QLabel(tr("就绪"), this);
+        toolbar->addWidget(m_statusLabel);
+    }
+
+    void loadBulkTestData(int count)
+    {
+        QElapsedTimer timer;
+        timer.start();
+
+        m_statusLabel->setText(tr("⏳ 正在加载 %1 条数据...").arg(count));
+        m_statusLabel->repaint();
+        QApplication::processEvents();
+
+        m_timeline->loadBulkTestData(count);
+        m_timeline->scrollToBottom();
+
+        qint64 loadTime = timer.elapsed();
+        m_statusLabel->setText(tr("✅ 已加载 %1 条数据 | 耗时: %2ms | 滚动流畅")
+                        .arg(count)
+                        .arg(loadTime));
+    }
+
     void setupAdapter()
     {
         // 创建 Ollama 适配器
@@ -113,6 +177,10 @@ private:
     AISDK::OllamaAdapter* m_adapter = nullptr;
     QString m_thinkingId;
     bool m_aiMessageAdded = false;
+
+    // 测试控件
+    QSpinBox* m_countSpin = nullptr;
+    QLabel* m_statusLabel = nullptr;
 };
 
 int main(int argc, char* argv[])

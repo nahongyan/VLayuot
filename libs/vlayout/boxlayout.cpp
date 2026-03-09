@@ -1,6 +1,5 @@
-#include "vlayout/boxlayout.h"
+﻿#include "vlayout/boxlayout.h"
 #include <algorithm>
-#include <cmath>
 
 namespace VLayout {
 

@@ -1,4 +1,5 @@
 #include "timeline_model.h"
+#include "qrandom.h"
 
 #include <QUuid>
 #include <QDateTime>
@@ -1048,6 +1049,192 @@ void TimelineModel::loadSampleData()
     n50.content = QStringLiteral("不客气！很高兴能帮助到你。如果后续有其他问题，随时可以问我。祝你的项目开发顺利！");
     n50.timestamp = QDateTime::currentMSecsSinceEpoch();
     m_nodes.push_back(n50);
+
+    endResetModel();
+}
+
+void TimelineModel::loadBulkTestData(int count)
+{
+    beginResetModel();
+    m_nodes.clear();
+    m_nodes.reserve(count * 3);  // 预留更多空间，因为一条对话可能包含多个节点
+
+    QRandomGenerator* rng = QRandomGenerator::global();
+
+    // 用户问题模板 - 更真实的问题
+    struct UserQuestion {
+        QString question;
+        QString code;
+        QString language;
+    };
+
+    QVector<UserQuestion> userQuestions = {
+        {tr("你好，请帮我写一个排序算法"), "", ""},
+        {tr("这段代码为什么报错？\n```cpp\nint* p = new int[10];\ndelete p;  // 应该是 delete[] p;\n```"), "int* p = new int[10];\ndelete p;", "cpp"},
+        {tr("如何优化这个数据库查询？"), "", ""},
+        {tr("帮我实现一个线程安全的单例模式"), "", ""},
+        {tr("这个正则表达式怎么写？匹配邮箱地址"), "", ""},
+        {tr("解释一下Qt的信号槽机制"), "", ""},
+        {tr("如何实现一个HTTP服务器？"), "", ""},
+        {tr("帮我写一个JSON解析器"), "", ""},
+        {tr("这个内存泄漏怎么定位？"), "", ""},
+        {tr("实现一个LRU缓存"), "", ""},
+        {tr("如何处理大文件上传？"), "", ""},
+        {tr("帮我设计一个状态机"), "", ""},
+        {tr("这个递归会有栈溢出问题吗？"), "", ""},
+        {tr("实现一个观察者模式"), "", ""},
+        {tr("如何做单元测试mock？"), "", ""},
+        {tr("这个算法的时间复杂度是多少？\n```python\ndef fib(n):\n    if n <= 1: return n\n    return fib(n-1) + fib(n-2)\n```"), "def fib(n):\n    if n <= 1: return n\n    return fib(n-1) + fib(n-2)", "python"},
+        {tr("帮我写一个二叉树遍历"), "", ""},
+        {tr("如何防止SQL注入？"), "", ""},
+        {tr("实现一个简单的RPC框架"), "", ""},
+        {tr("这个死锁怎么解决？"), "", ""}
+    };
+
+    // AI 回复模板 - 包含思考过程和代码
+    struct AIResponse {
+        QString thinking;
+        QString content;
+        QString code;
+        QString language;
+        QString toolName;
+    };
+
+    QVector<AIResponse> aiResponses = {
+        {
+            tr("分析需求 → 选择算法 → 考虑边界情况"),
+            tr("好的，我来帮你实现一个快速排序算法。快速排序是一个高效的排序算法，平均时间复杂度为 O(n log n)。"),
+            "void quickSort(vector<int>& arr, int left, int right) {\n    if (left >= right) return;\n    int pivot = arr[(left + right) / 2];\n    int i = left, j = right;\n    while (i <= j) {\n        while (arr[i] < pivot) i++;\n        while (arr[j] > pivot) j--;\n        if (i <= j) {\n            swap(arr[i], arr[j]);\n            i++; j--;\n        }\n    }\n    quickSort(arr, left, j);\n    quickSort(arr, i, right);\n}",
+            "cpp", "write_file"
+        },
+        {
+            tr("识别问题 → 分析原因 → 提供解决方案"),
+            tr("你发现了一个常见的内存管理错误。当你使用 `new[]` 分配数组时，必须使用 `delete[]` 来释放，否则会导致内存泄漏。"),
+            "// 正确的做法\nint* p = new int[10];\n// ... 使用数组 ...\ndelete[] p;  // 注意使用 delete[]\n\n// 或者更好的方式：使用智能指针\nauto p = std::make_unique<int[]>(10);",
+            "cpp", "explain_code"
+        },
+        {
+            tr("分析查询计划 → 识别瓶颈 → 优化建议"),
+            tr("数据库查询优化需要从以下几个方面入手：\n\n1. **索引优化** - 确保查询字段有合适的索引\n2. **避免 SELECT *** - 只查询需要的字段\n3. **使用 EXPLAIN 分析** - 了解查询执行计划"),
+            "-- 添加索引\nCREATE INDEX idx_user_email ON users(email);\n\n-- 优化查询\nSELECT id, name FROM users WHERE email = ?;",
+            "sql", "execute_query"
+        },
+        {
+            tr("分析线程安全需求 → 选择实现方式 → 考虑C++11特性"),
+            tr("线程安全的单例模式推荐使用 Meyers' Singleton，利用C++11的静态局部变量线程安全特性："),
+            "class Singleton {\npublic:\n    static Singleton& instance() {\n        static Singleton inst;  // C++11保证线程安全\n        return inst;\n    }\n    \n    // 禁止拷贝\n    Singleton(const Singleton&) = delete;\n    Singleton& operator=(const Singleton&) = delete;\n    \nprivate:\n    Singleton() = default;\n};",
+            "cpp", "write_file"
+        },
+        {
+            tr("理解邮箱格式 → 设计正则模式 → 测试验证"),
+            tr("邮箱地址的正则表达式需要匹配以下格式：\n- 用户名：字母、数字、点、下划线、减号\n- @ 符号\n- 域名：字母、数字、点、减号"),
+            "// 邮箱正则表达式\nconst QRegularExpression emailRegex(\n    R\"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$)\"\n);\n\n// 使用示例\nbool isValid = emailRegex.match(email).hasMatch();",
+            "cpp", "write_file"
+        },
+        {
+            tr("理解Qt元对象系统 → 分析连接机制 → 总结关键点"),
+            tr("Qt的信号槽机制是其核心特性之一，它实现了对象间的松耦合通信：\n\n**工作原理：**\n1. 信号(Signal) - 事件发生时发射\n2. 槽(Slot) - 响应信号的函数\n3. 连接(Connection) - 建立信号和槽的关联\n\n**连接方式：**\n- 直接连接(Direct) - 同线程立即调用\n- 队列连接(Queued) - 跨线程异步调用"),
+            "// 连接示例\nconnect(sender, &Sender::signalName,\n        receiver, &Receiver::slotName);\n\n// Lambda连接\nconnect(button, &QPushButton::clicked, [=]() {\n    qDebug() << \"Button clicked!\";\n});",
+            "cpp", ""
+        },
+        {
+            tr("设计服务器架构 → 选择协议 → 实现核心功能"),
+            tr("实现一个简单的HTTP服务器可以使用Qt的QTcpServer：\n\n核心步骤：\n1. 创建TCP服务器监听端口\n2. 接受客户端连接\n3. 解析HTTP请求\n4. 发送HTTP响应"),
+            "class HttpServer : public QTcpServer {\n    void incomingConnection(qintptr socketDesc) override {\n        QTcpSocket* socket = new QTcpSocket(this);\n        socket->setSocketDescriptor(socketDesc);\n        connect(socket, &QTcpSocket::readyRead, [=]() {\n            QByteArray request = socket->readAll();\n            // 解析请求...\n            QByteArray response = \"HTTP/1.1 200 OK\\r\\n\\r\\nHello!\";\n            socket->write(response);\n            socket->disconnectFromHost();\n        });\n    }\n};",
+            "cpp", "write_file"
+        },
+        {
+            tr("分析JSON结构 → 设计解析器 → 处理错误情况"),
+            tr("使用Qt内置的QJsonDocument来解析JSON非常简单："),
+            "// 解析JSON\nQByteArray jsonData = R\"({\"name\": \"Test\", \"value\": 42})\";\nQJsonDocument doc = QJsonDocument::fromJson(jsonData);\n\nif (doc.isObject()) {\n    QJsonObject obj = doc.object();\n    QString name = obj[\"name\"].toString();\n    int value = obj[\"value\"].toInt();\n}",
+            "cpp", ""
+        },
+        {
+            tr("定位内存泄漏原因 → 选择检测工具 → 提供解决方案"),
+            tr("内存泄漏定位方法：\n\n1. **Valgrind** (Linux) - 最强大的内存检测工具\n2. **Visual Studio Debugger** (Windows) - 内置内存快照功能\n3. **AddressSanitizer** (GCC/Clang) - 编译时检测\n4. **Qt对象树** - 检查QObject父子关系"),
+            "// 编译时启用AddressSanitizer\n// g++ -fsanitize=address -g program.cpp\n\n// 运行时会自动检测内存泄漏",
+            "bash", "run_command"
+        },
+        {
+            tr("理解LRU原理 → 设计数据结构 → 实现get/put操作"),
+            tr("LRU(Least Recently Used)缓存需要：\n1. 哈希表 - O(1)查找\n2. 双向链表 - O(1)移动节点\n\n最近使用的移到头部，满时删除尾部"),
+            "class LRUCache {\n    list<pair<int,int>> cache;  // (key, value)\n    unordered_map<int, list<pair<int,int>>::iterator> map;\n    int capacity;\npublic:\n    int get(int key) {\n        if (!map.count(key)) return -1;\n        cache.splice(cache.begin(), cache, map[key]);\n        return map[key]->second;\n    }\n    void put(int key, int value) {\n        if (map.count(key)) {\n            cache.erase(map[key]);\n        } else if (cache.size() >= capacity) {\n            map.erase(cache.back().first);\n            cache.pop_back();\n        }\n        cache.push_front({key, value});\n        map[key] = cache.begin();\n    }\n};",
+            "cpp", "write_file"
+        }
+    };
+
+    // 工具调用模板
+    QVector<QString> toolNames = {
+        QStringLiteral("read_file"),
+        QStringLiteral("write_file"),
+        QStringLiteral("execute_command"),
+        QStringLiteral("search_web"),
+        QStringLiteral("list_directory"),
+        QStringLiteral("analyze_code")
+    };
+
+    qint64 baseTime = QDateTime::currentMSecsSinceEpoch() - count * 5000;
+    int conversationIndex = 0;
+
+    for (int i = 0; i < count; ++i) {
+        int questionIdx = conversationIndex % userQuestions.size();
+        const auto& question = userQuestions[questionIdx];
+        int responseIdx = conversationIndex % aiResponses.size();
+        const auto& response = aiResponses[responseIdx];
+
+        // 1. 用户消息
+        TimelineNode userNode;
+        userNode.id = generateId();
+        userNode.type = NodeType::UserMessage;
+        userNode.source = MessageSource::User;
+        userNode.content = question.question;
+        userNode.timestamp = baseTime + i * 3000;
+        m_nodes.push_back(userNode);
+
+        // 2. 思考过程（30%概率添加）
+        if (rng->bounded(100) < 30) {
+            TimelineNode thinkNode;
+            thinkNode.id = generateId();
+            thinkNode.type = NodeType::ThinkingStep;
+            thinkNode.thinkingSteps = response.thinking.split(QStringLiteral(" → "));
+            thinkNode.timestamp = baseTime + i * 3000 + 500;
+            m_nodes.push_back(thinkNode);
+        }
+
+        // 3. 工具调用（40%概率添加）
+        if (rng->bounded(100) < 40 && !response.toolName.isEmpty()) {
+            TimelineNode toolNode;
+            toolNode.id = generateId();
+            toolNode.type = NodeType::ToolCall;
+            toolNode.toolName = response.toolName;
+            toolNode.toolArgs = {{QStringLiteral("file"), QStringLiteral("src/implementation.cpp")}};
+            toolNode.toolStatus = static_cast<ToolStatus>(rng->bounded(3));  // Pending/Running/Success
+            toolNode.timestamp = baseTime + i * 3000 + 1000;
+            m_nodes.push_back(toolNode);
+        }
+
+        // 4. AI消息（带代码块）
+        TimelineNode aiNode;
+        aiNode.id = generateId();
+        aiNode.type = NodeType::AIMessage;
+        aiNode.source = MessageSource::Assistant;
+        aiNode.content = response.content;
+        aiNode.timestamp = baseTime + i * 3000 + 1500;
+        m_nodes.push_back(aiNode);
+
+        // 5. 代码块（60%概率添加）
+        if (rng->bounded(100) < 60 && !response.code.isEmpty()) {
+            TimelineNode codeNode;
+            codeNode.id = generateId();
+            codeNode.type = NodeType::CodeBlock;
+            codeNode.language = response.language;
+            codeNode.code = response.code;
+            codeNode.timestamp = baseTime + i * 3000 + 2000;
+            m_nodes.push_back(codeNode);
+        }
+
+        conversationIndex++;
+    }
 
     endResetModel();
 }
